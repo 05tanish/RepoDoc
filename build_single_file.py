@@ -16,6 +16,10 @@ MODULES = [
     'scoring.py',
     'report.py',
     'baseline.py',
+    'config.py',
+    'autofix.py',
+    'graph.py',
+    'linter.py',
     '__main__.py'
 ]
 

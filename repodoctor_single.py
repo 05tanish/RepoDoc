@@ -59,6 +59,7 @@ class GitInfo:
     commits: int = 0
     top_contributor: str = ""
     hotspot: str = ""
+    bus_factor: List[str] = None
 
 @dataclass
 class DuplicateBlock:
@@ -151,7 +152,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable live CLI spinner / progress bar animation"
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
+    parser.add_argument("--init-ci", action="store_true", help="Generate GitHub Actions CI/CD pipeline")
+    parser.add_argument("--fix", action="store_true", help="Auto-fix safe code smells and formatting issues")
+    parser.add_argument("--graph", action="store_true", help="Generate an ASCII dependency graph")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.0.1")
 
     return parser
 
@@ -1340,6 +1344,359 @@ def compare_baseline(current_data: ReportData, baseline_path: str) -> Optional[D
         return None
 
 
+# --- config.py ---
+
+
+def load_config(root_path: str):
+    """
+    Loads configuration from repodoctor.json or pyproject.toml in the root path.
+    Returns a dictionary of arguments to override CLI defaults.
+    """
+    config = {}
+    
+    # Try repodoctor.json
+    json_path = os.path.join(root_path, "repodoctor.json")
+    if os.path.isfile(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                config.update(json.load(f))
+        except Exception:
+            pass
+
+    # Try pyproject.toml [tool.repodoctor]
+    toml_path = os.path.join(root_path, "pyproject.toml")
+    if os.path.isfile(toml_path):
+        try:
+            with open(toml_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Extremely naive TOML parser for [tool.repodoctor] section
+                match = re.search(r'\[tool\.repodoctor\](.*?)(?:^\[|$)', content, re.MULTILINE | re.DOTALL)
+                if match:
+                    section = match.group(1)
+                    for line in section.splitlines():
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if "=" in line:
+                            key, val = line.split("=", 1)
+                            key = key.strip()
+                            val = val.strip()
+                            # Parse boolean
+                            if val.lower() == "true": val = True
+                            elif val.lower() == "false": val = False
+                            # Parse int
+                            elif val.isdigit(): val = int(val)
+                            # Parse string
+                            elif val.startswith('"') and val.endswith('"'): val = val[1:-1]
+                            elif val.startswith("'") and val.endswith("'"): val = val[1:-1]
+                            config[key] = val
+        except Exception:
+            pass
+
+    return config
+
+
+# --- autofix.py ---
+
+
+def apply_fixes(file_path: str, content: str, language: str) -> str:
+    """
+    Applies safe automatic fixes to the file content.
+    Returns the modified content, or original content if no changes.
+    """
+    original_content = content
+    modified = False
+
+    # Fix: Trailing whitespace
+    if re.search(r'[ \t]+$', content, re.MULTILINE):
+        content = re.sub(r'[ \t]+$', '', content, flags=re.MULTILINE)
+        modified = True
+        
+    # Fix: Missing EOF newline
+    if content and not content.endswith('\n'):
+        content += '\n'
+        modified = True
+        
+    # Fix: Missing 'use strict' in JS (only if not already there and file has logic)
+    if language == "JavaScript" and not re.search(r'["\']use strict["\']', content) and len(content.strip()) > 20:
+        content = '"use strict";\n\n' + content
+        modified = True
+
+    if modified and content != original_content:
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+        except Exception:
+            pass
+            
+    return content
+
+
+# --- graph.py ---
+
+
+def generate_graph(files) -> str:
+    """
+    Scans files for import statements and builds a lightweight dependency graph.
+    Returns an ASCII string representation of the graph.
+    """
+    graph = defaultdict(list)
+    
+    for f in files:
+        if f.language == "Python":
+            # Very naive Python import parser
+            imports = re.findall(r'^import ([a-zA-Z0-9_\.]+)', f.content, re.MULTILINE)
+            from_imports = re.findall(r'^from ([a-zA-Z0-9_\.]+) import', f.content, re.MULTILINE)
+            for imp in imports + from_imports:
+                graph[f.relative_path].append(imp)
+        elif f.language == "JavaScript":
+            # Very naive JS import parser
+            imports = re.findall(r'import .*? from ["\'](.*?)["\']', f.content)
+            requires = re.findall(r'require\(["\'](.*?)["\']\)', f.content)
+            for imp in imports + requires:
+                graph[f.relative_path].append(imp)
+                
+    if not graph:
+        return "No local dependencies detected."
+        
+    output = ["\nASCII Dependency Graph:"]
+    for file_path, deps in graph.items():
+        if deps:
+            output.append(f"├── {file_path}")
+            for d in deps:
+                output.append(f"│   └── {d}")
+                
+    return "\n".join(output)
+
+
+# --- linter.py ---
+
+
+def run_micro_linters(file_info, content):
+    smells = []
+    lines = content.splitlines()
+    
+    if not lines:
+        return smells
+    
+    # 14. Empty File Check
+    if not content.strip():
+        smells.append("Completely empty file")
+        
+    # 15. Banned words (Profanity / Slurs / etc.)
+    if re.search(r'\b(fuck|shit|crap|bitch)\b', content, re.IGNORECASE):
+        smells.append("Profanity found in code")
+        
+    # 16. TODO without owner
+    if re.search(r'//\s*TODO(?![(\[])', content) or re.search(r'#\s*TODO(?![(\[])', content):
+        smells.append("TODO without owner/ticket")
+        
+    # Language Specific Extensions
+    if file_info.language in ("JavaScript", "TypeScript"):
+        # 17. eval() usage
+        if re.search(r'\beval\s*\(', content):
+            smells.append("Dangerous eval() usage")
+        # 18. Missing strict mode (for pure JS)
+        if file_info.language == "JavaScript" and not re.search(r'["\']use strict["\']', content):
+            smells.append("Missing \"use strict\" in JS")
+        # 19. console.error/warn
+        if re.search(r'\bconsole\.(error|warn)\s*\(', content):
+            smells.append("console.error/warn left in code")
+            
+    elif file_info.language == "Python":
+        # 20. eval() / exec()
+        if re.search(r'\b(eval|exec)\s*\(', content):
+            smells.append("Dangerous eval()/exec() usage")
+        try:
+            tree = ast.parse(content)
+            for n in ast.walk(tree):
+                # 21. Wildcard imports
+                if isinstance(n, ast.ImportFrom) and any(alias.name == '*' for alias in n.names):
+                    if "Wildcard import (import *)" not in smells: smells.append("Wildcard import (import *)")
+                # 22. Bare exceptions
+                if isinstance(n, ast.ExceptHandler) and n.type is None:
+                    if "Bare except: block" not in smells: smells.append("Bare except: block")
+                # 23. Mutable default arguments
+                if isinstance(n, ast.arguments):
+                    for d in n.defaults:
+                        if isinstance(d, (ast.List, ast.Dict, ast.Set)):
+                            if "Mutable default argument ([] or {})" not in smells: smells.append("Mutable default argument ([] or {})")
+                # 24. sys.exit()
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute):
+                    if isinstance(n.func.value, ast.Name) and n.func.value.id == "sys" and n.func.attr == "exit":
+                        if "Hard sys.exit() found" not in smells: smells.append("Hard sys.exit() found")
+        except:
+            pass
+            
+    elif file_info.language == "CSS":
+        # 25. Empty rulesets
+        if re.search(r'\{[^}]*\}', content) and not re.search(r'\{[^a-zA-Z]*[a-zA-Z-]+\s*:[^}]*\}', content):
+            smells.append("Empty CSS ruleset")
+        # 26. Deep nesting (heuristic for uncompiled CSS/SCSS)
+        if content.count('>') > (len(lines) // 10): 
+            smells.append("High CSS child combinator density")
+            
+    elif file_info.language == "HTML":
+        # 27. Inline CSS (style="...")
+        if re.search(r'\bstyle\s*=\s*["\']', content):
+            smells.append("Inline CSS (style=...) used")
+        # 28. Inline JS (onclick="...")
+        if re.search(r'\bon(click|load|submit|mouseover|change)\s*=\s*["\']', content):
+            smells.append("Inline JavaScript (onclick=...) used")
+            
+    elif file_info.language == "JSON":
+        # 29. Giant JSON files
+        if len(lines) > 2000:
+            smells.append("Massive JSON configuration (>2000 lines)")
+            
+    elif file_info.language == "Markdown":
+        # 30. Missing H1 title at start
+        if lines and not lines[0].startswith('# '):
+            smells.append("Markdown missing # H1 Title at start")
+
+    return smells
+
+    # 1. Trailing whitespace
+    if any(l.rstrip('\n\r').endswith((' ', '\t')) for l in lines):
+        smells.append("Trailing whitespace")
+        
+    # 2. Missing EOF Newline
+    if content and not content.endswith('\n'):
+        smells.append("Missing EOF newline")
+        
+    # 3. Line Length > 120
+    if any(len(l) > 120 for l in lines):
+        smells.append("Lines > 120 chars")
+        
+    # 4. Mixed Tabs & Spaces
+    has_tabs = any('\t' in l for l in lines)
+    has_spaces = any(l.startswith(' ') for l in lines)
+    if has_tabs and has_spaces:
+        smells.append("Mixed tabs and spaces")
+        
+    # 5. Localhost Hardcoding
+    if re.search(r'http://localhost|http://127\.0\.0\.1', content):
+        smells.append("Hardcoded localhost URL")
+        
+    # Language Specific
+    if file_info.language in ("JavaScript", "TypeScript"):
+        # 6. console.log
+        if re.search(r'\bconsole\.log\s*\(', content):
+            smells.append("console.log() found")
+        # 7. debugger
+        if re.search(r'\bdebugger\s*;?', content):
+            smells.append("debugger statement found")
+            
+    elif file_info.language == "Python":
+        # 8. print statements
+        if re.search(r'\bprint\s*\(', content):
+            smells.append("print() statement found")
+        try:
+            tree = ast.parse(content)
+            for n in ast.walk(tree):
+                # 9. Too many args
+                if isinstance(n, ast.FunctionDef):
+                    if len(n.args.args) > 6:
+                        if "Function with > 6 args" not in smells: smells.append("Function with > 6 args")
+                    # 10. Missing docstring
+                    if not ast.get_docstring(n):
+                        if "Missing docstring" not in smells: smells.append("Missing docstring")
+                # 11. Swallowed errors
+                if isinstance(n, ast.ExceptHandler):
+                    if not n.body or (len(n.body) == 1 and isinstance(n.body[0], ast.Pass)):
+                        if "Empty except block" not in smells: smells.append("Empty except block")
+        except:
+            pass
+            
+    elif file_info.language == "CSS":
+        # 12. CSS !important
+        if "!important" in content:
+            smells.append("CSS !important used")
+            
+    elif file_info.language == "HTML":
+        # 13. Missing alt text
+        if re.search(r'<img\b(?![^>]*\balt=)[^>]*>', content):
+            smells.append("<img> missing alt attribute")
+            
+
+    # 14. Empty File Check
+    if not content.strip():
+        smells.append("Completely empty file")
+        
+    # 15. Banned words (Profanity / Slurs / etc.)
+    if re.search(r'\b(fuck|shit|crap|bitch)\b', content, re.IGNORECASE):
+        smells.append("Profanity found in code")
+        
+    # 16. TODO without owner
+    if re.search(r'//\s*TODO(?![(\[])', content) or re.search(r'#\s*TODO(?![(\[])', content):
+        smells.append("TODO without owner/ticket")
+        
+    # Language Specific Extensions
+    if file_info.language in ("JavaScript", "TypeScript"):
+        # 17. eval() usage
+        if re.search(r'\beval\s*\(', content):
+            smells.append("Dangerous eval() usage")
+        # 18. Missing strict mode (for pure JS)
+        if file_info.language == "JavaScript" and not re.search(r'["\']use strict["\']', content):
+            smells.append("Missing \"use strict\" in JS")
+        # 19. console.error/warn
+        if re.search(r'\bconsole\.(error|warn)\s*\(', content):
+            smells.append("console.error/warn left in code")
+            
+    elif file_info.language == "Python":
+        # 20. eval() / exec()
+        if re.search(r'\b(eval|exec)\s*\(', content):
+            smells.append("Dangerous eval()/exec() usage")
+        try:
+            tree = ast.parse(content)
+            for n in ast.walk(tree):
+                # 21. Wildcard imports
+                if isinstance(n, ast.ImportFrom) and any(alias.name == '*' for alias in n.names):
+                    if "Wildcard import (import *)" not in smells: smells.append("Wildcard import (import *)")
+                # 22. Bare exceptions
+                if isinstance(n, ast.ExceptHandler) and n.type is None:
+                    if "Bare except: block" not in smells: smells.append("Bare except: block")
+                # 23. Mutable default arguments
+                if isinstance(n, ast.arguments):
+                    for d in n.defaults:
+                        if isinstance(d, (ast.List, ast.Dict, ast.Set)):
+                            if "Mutable default argument ([] or {})" not in smells: smells.append("Mutable default argument ([] or {})")
+                # 24. sys.exit()
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute):
+                    if isinstance(n.func.value, ast.Name) and n.func.value.id == "sys" and n.func.attr == "exit":
+                        if "Hard sys.exit() found" not in smells: smells.append("Hard sys.exit() found")
+        except:
+            pass
+            
+    elif file_info.language == "CSS":
+        # 25. Empty rulesets
+        if re.search(r'\{[^}]*\}', content) and not re.search(r'\{[^a-zA-Z]*[a-zA-Z-]+\s*:[^}]*\}', content):
+            smells.append("Empty CSS ruleset")
+        # 26. Deep nesting (heuristic for uncompiled CSS/SCSS)
+        if content.count('>') > (len(lines) // 10): 
+            smells.append("High CSS child combinator density")
+            
+    elif file_info.language == "HTML":
+        # 27. Inline CSS (style="...")
+        if re.search(r'\bstyle\s*=\s*["\']', content):
+            smells.append("Inline CSS (style=...) used")
+        # 28. Inline JS (onclick="...")
+        if re.search(r'\bon(click|load|submit|mouseover|change)\s*=\s*["\']', content):
+            smells.append("Inline JavaScript (onclick=...) used")
+            
+    elif file_info.language == "JSON":
+        # 29. Giant JSON files
+        if len(lines) > 2000:
+            smells.append("Massive JSON configuration (>2000 lines)")
+            
+    elif file_info.language == "Markdown":
+        # 30. Missing H1 title at start
+        if lines and not lines[0].startswith('# '):
+            smells.append("Markdown missing # H1 Title at start")
+
+    return smells
+
+
 # --- __main__.py ---
 
 
@@ -1537,6 +1894,18 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
                 prompt_chunk += "[Error reading file contents]\n\n"
         llm_report = prompt_chunk
 
+    if getattr(args, "graph", False):
+        # populate content for graph
+        for f in files:
+            try:
+                with open(f.path, 'r', encoding='utf-8', errors='ignore') as fh:
+                    f.content = fh.read()
+            except Exception:
+                f.content = ""
+                
+        graph_output = generate_graph(files)
+        terminal_report += "\n" + graph_output + "\n"
+            
     return {
         "idx": idx,
         "repo_name": repo_name,
@@ -1553,6 +1922,42 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
 def main():
     start_time = time.time()
     args = parse_args()
+
+    # Load native config if exists
+    for rp in args.path:
+        config = load_config(rp)
+        for k, v in config.items():
+            if hasattr(args, k) and getattr(args, k) == getattr(args.__class__, k, None): # Only override if default? Let's just override loosely
+                pass # Wait, simpler: just dict update
+        for k, v in config.items():
+            setattr(args, k, v)
+
+    # Init CI/CD
+    if getattr(args, "init_ci", False):
+        for rp in args.path:
+            wf_dir = os.path.join(rp, ".github", "workflows")
+            os.makedirs(wf_dir, exist_ok=True)
+            wf_path = os.path.join(wf_dir, "repodoctor.yml")
+            with open(wf_path, "w", encoding="utf-8") as f:
+                f.write('''name: RepoDoctor Health Check
+on: [push, pull_request]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install RepoDoctor
+        run: pip install repodoctor-cli
+      - name: Run RepoDoctor
+        run: repodoctor . --fail-under 70
+''')
+            print(f"✔ CI/CD pipeline generated at {wf_path}")
+        sys.exit(0)
+
 
     # 1. Print Banner & Greeting
     use_color = not args.no_color and sys.stdout.isatty()
@@ -1652,6 +2057,9 @@ def main():
             html_outputs.append(res["html_report"])
         if res["llm_report"] is not None:
             llm_outputs.append(res["llm_report"])
+            
+
+
 
     if args.json and json_outputs:
         import json

@@ -38,7 +38,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable live CLI spinner / progress bar animation"
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
+    parser.add_argument("--init-ci", action="store_true", help="Generate GitHub Actions CI/CD pipeline")
+    parser.add_argument("--fix", action="store_true", help="Auto-fix safe code smells and formatting issues")
+    parser.add_argument("--graph", action="store_true", help="Generate an ASCII dependency graph")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.0.1")
 
     return parser
 

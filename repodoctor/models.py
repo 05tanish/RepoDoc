@@ -29,6 +29,7 @@ class GitInfo:
     commits: int = 0
     top_contributor: str = ""
     hotspot: str = ""
+    bus_factor: List[str] = None
 
 @dataclass
 class DuplicateBlock:

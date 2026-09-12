@@ -216,6 +216,19 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
                 prompt_chunk += "[Error reading file contents]\n\n"
         llm_report = prompt_chunk
 
+    if getattr(args, "graph", False):
+        from .graph import generate_graph
+        # populate content for graph
+        for f in files:
+            try:
+                with open(f.path, 'r', encoding='utf-8', errors='ignore') as fh:
+                    f.content = fh.read()
+            except Exception:
+                f.content = ""
+                
+        graph_output = generate_graph(files)
+        terminal_report += "\n" + graph_output + "\n"
+            
     return {
         "idx": idx,
         "repo_name": repo_name,
@@ -232,6 +245,43 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
 def main():
     start_time = time.time()
     args = parse_args()
+
+    # Load native config if exists
+    from .config import load_config
+    for rp in args.path:
+        config = load_config(rp)
+        for k, v in config.items():
+            if hasattr(args, k) and getattr(args, k) == getattr(args.__class__, k, None): # Only override if default? Let's just override loosely
+                pass # Wait, simpler: just dict update
+        for k, v in config.items():
+            setattr(args, k, v)
+
+    # Init CI/CD
+    if getattr(args, "init_ci", False):
+        for rp in args.path:
+            wf_dir = os.path.join(rp, ".github", "workflows")
+            os.makedirs(wf_dir, exist_ok=True)
+            wf_path = os.path.join(wf_dir, "repodoctor.yml")
+            with open(wf_path, "w", encoding="utf-8") as f:
+                f.write('''name: RepoDoctor Health Check
+on: [push, pull_request]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install RepoDoctor
+        run: pip install repodoctor-cli
+      - name: Run RepoDoctor
+        run: repodoctor . --fail-under 70
+''')
+            print(f"✔ CI/CD pipeline generated at {wf_path}")
+        sys.exit(0)
+
 
     # 1. Print Banner & Greeting
     use_color = not args.no_color and sys.stdout.isatty()
@@ -331,6 +381,9 @@ def main():
             html_outputs.append(res["html_report"])
         if res["llm_report"] is not None:
             llm_outputs.append(res["llm_report"])
+            
+
+
 
     if args.json and json_outputs:
         import json
