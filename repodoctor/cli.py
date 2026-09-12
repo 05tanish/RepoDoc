@@ -41,7 +41,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-ci", action="store_true", help="Generate GitHub Actions CI/CD pipeline")
     parser.add_argument("--fix", action="store_true", help="Auto-fix safe code smells and formatting issues")
     parser.add_argument("--graph", action="store_true", help="Generate an ASCII dependency graph")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.1")
+    
+    try:
+        from importlib.metadata import version
+        __version__ = version("repodoctor-cli")
+    except Exception:
+        __version__ = "unknown"
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser
 
