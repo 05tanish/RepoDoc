@@ -22,6 +22,14 @@ Once installed, simply navigate to any repository and run:
 repodoctor .
 ```
 
+## 🔥 What's New in v2.0 (The Enterprise Upgrade)
+- **Auto-Fix Engine (`--fix`)**: Automatically rewrites code to fix safe smells (trailing whitespace, missing EOF newlines, missing JS `use strict`).
+- **ASCII Dependency Graph (`--graph`)**: Generates a beautiful ASCII tree showing exactly how your Python and JavaScript files import each other.
+- **GitHub Actions CI/CD (`--init-ci`)**: Instantly generates a `.github/workflows/repodoctor.yml` pipeline to block bad Pull Requests.
+- **Bus Factor Analyzer**: Analyzes Git history to flag critical files that are only understood by a single developer.
+- **Deep-Scan Security**: Advanced credential detection for AWS Keys, Stripe Secrets, GitHub PATs, Slack Tokens, and Discord Webhooks.
+- **Native Config Files**: Configure RepoDoctor directly in `repodoctor.json` or `pyproject.toml` so you never have to type flags again.
+
 
 ## Features
 - **Multi-Threaded Parallel Scanning**: Asynchronously processes massive codebases in milliseconds.\n- **Animated Terminal UI**: Beautiful typewriter animations and progress spinners.\n- **Multi-Repository Aggregation**: Scan multiple codebases simultaneously and generate unified or independent reports across all flags (HTML, JSON, LLM prompt).\n- **Zero Runtime Dependencies**: Built entirely with Python's standard library.
