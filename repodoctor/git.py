@@ -18,7 +18,7 @@ def run_git(cmd: list, cwd: str) -> str:
 
 def get_git_info(root_path: str) -> GitInfo:
     root = os.path.abspath(root_path)
-    
+
     is_git_repo = run_git(["rev-parse", "--is-inside-work-tree"], root)
     if is_git_repo != "true":
         return GitInfo(available=False)
@@ -34,13 +34,18 @@ def get_git_info(root_path: str) -> GitInfo:
     uncommitted = len(status_str.splitlines()) if status_str else 0
 
     top_contributor = ""
+    bus_factor_risk = ""
     try:
         result = subprocess.run(["git", "shortlog", "-sn", "HEAD"], cwd=root, capture_output=True, text=True, check=True)
         lines = result.stdout.splitlines()
         if lines and lines[0]:
             parts = lines[0].strip().split('\t', 1)
             if len(parts) == 2:
-                top_contributor = f"{parts[1].strip()} ({parts[0].strip()} commits)"
+                top_author_commits = int(parts[0].strip())
+                top_contributor = f"{parts[1].strip()} ({top_author_commits} commits)"
+
+                if commits > 10 and (top_author_commits / commits) > 0.70:
+                    bus_factor_risk = f"High ⚠️ ({top_author_commits}/{commits} commits by one author)"
     except Exception:
         pass
 
@@ -63,5 +68,6 @@ def get_git_info(root_path: str) -> GitInfo:
         uncommitted_changes=uncommitted,
         commits=commits,
         top_contributor=top_contributor,
-        hotspot=hotspot
+        hotspot=hotspot,
+        bus_factor_risk=bus_factor_risk
     )

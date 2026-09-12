@@ -7,7 +7,12 @@ PATTERNS = [
     (re.compile(r'(?i)(?:api_?key|secret|token|password)[\s:=]+[\'"]([A-Za-z0-9_\-]{16,})[\'"]'), "API Key or Token", "HIGH", "A variable name suggests an API key or token was hardcoded."),
     (re.compile(r'-----BEGIN [A-Z]+ PRIVATE KEY-----'), "Private Key", "HIGH", "A private cryptographic key is present."),
     (re.compile(r'https?://[a-zA-Z0-9_\-]+:[a-zA-Z0-9_\-]+@[a-zA-Z0-9_\-\.]+'), "Credential URL", "HIGH", "A URL contains embedded basic authentication credentials."),
-    (re.compile(r'(sk-[a-zA-Z0-9]{20,})'), "Potential API Key", "HIGH", "Pattern matches common cloud API keys (e.g., sk-...).")
+    (re.compile(r'(sk-[a-zA-Z0-9]{20,})'), "Potential API Key", "HIGH", "Pattern matches common cloud API keys (e.g., sk-...)."),
+    (re.compile(r'(AKIA[0-9A-Z]{16})'), "AWS Access Key", "CRITICAL", "AWS Access Key ID exposed."),
+    (re.compile(r'(sk_(live|test)_[0-9a-zA-Z]{24,})'), "Stripe Secret", "CRITICAL", "Stripe Secret Key exposed."),
+    (re.compile(r'(gh[pousr]_[A-Za-z0-9_]{36,})'), "GitHub PAT", "CRITICAL", "GitHub Personal Access Token exposed."),
+    (re.compile(r'(xox[baprs]-[0-9]+-[a-zA-Z0-9]+)'), "Slack Token", "CRITICAL", "Slack API Token exposed."),
+    (re.compile(r'(discord\.com/api/webhooks/[0-9]+/[a-zA-Z0-9_-]+)'), "Discord Webhook", "CRITICAL", "Discord Webhook exposed.")
 ]
 
 def redact(value: str) -> str:
@@ -17,11 +22,11 @@ def redact(value: str) -> str:
 
 def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
     findings = []
-    
+
     for f in files:
         if f.is_binary:
             continue
-            
+
         # Check .env
         if f.filename.startswith(".env"):
             findings.append(SecurityFinding(
@@ -41,7 +46,7 @@ def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
                         if match:
                             # For private key header, the match is the whole header
                             val_to_redact = match.group(1) if len(match.groups()) > 0 else match.group(0)
-                            
+
                             findings.append(SecurityFinding(
                                 filepath=f.relative_path,
                                 line_number=line_idx + 1,
@@ -52,5 +57,5 @@ def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
                             ))
         except Exception:
             pass
-            
+
     return findings

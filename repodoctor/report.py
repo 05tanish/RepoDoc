@@ -18,7 +18,7 @@ def print_project_tree(data, c_func):
             if part not in curr:
                 curr[part] = {}
             curr = curr[part]
-    
+
     lines = []
     def traverse(node, prefix=""):
         if len(lines) > 50: return
@@ -27,7 +27,7 @@ def print_project_tree(data, c_func):
             is_last = (i == len(keys) - 1)
             lines.append(prefix + ("└── " if is_last else "├── ") + key)
             traverse(node[key], prefix + ("    " if is_last else "│   "))
-            
+
     traverse(tree)
     if len(lines) > 50: lines.append("... (tree truncated)")
     print("\n".join(lines))
@@ -48,20 +48,20 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
 
     print(c("SUMMARY", "1"))
     print("────────────────────────────────────────────────────────────")
-    
+
     files_str = f"{len(data.files)}{fmt_delta(deltas['files']) if deltas else ''}"
     print(f"Files scanned:          {files_str}")
-    
+
     total_lines = sum(f.lines for f in data.files)
     lines_str = f"{total_lines:,}{fmt_delta(deltas['lines']) if deltas else ''}"
     print(f"Lines of code:          {lines_str}")
-    
+
     languages = set(f.language for f in data.files if f.language != "Unknown")
     lang_lines = {}
     for f in data.files:
         if f.language != "Unknown":
             lang_lines[f.language] = lang_lines.get(f.language, 0) + f.lines
-            
+
     total_lang_lines = sum(lang_lines.values())
     if total_lang_lines > 0:
         print(f"Languages detected:")
@@ -72,7 +72,7 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
             print(f"  {lang:<18} {bar}{pct:.1f}%\n")
     else:
         print(f"Languages detected:     None")
-    
+
     if data.score:
         score_str = f"{data.score.score}/100{fmt_delta(deltas['score']) if deltas else ''}"
         print(f"Health score:           {score_str}")
@@ -86,13 +86,13 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
     print(f"Long functions:         {long_functions}")
     high_nesting = sum(1 for f in data.files if f.metrics and f.metrics.max_nesting > 4)
     print(f"High nesting:           {high_nesting}")
-    
+
     total_smells = sum(len(f.code_smells) for f in data.files if f.code_smells)
     print(f"Code smells (Linting):  {total_smells}")
-    
+
     todos_str = f"{len(data.todos)}{fmt_delta(deltas['todos'], inverted=True) if deltas else ''}"
     print(f"TODO/FIXME items:       {todos_str}")
-    
+
     dups_str = f"{len(data.duplicates)}{fmt_delta(deltas['duplicates'], inverted=True) if deltas else ''}"
     print(f"Duplicate blocks:       {dups_str}")
     if data.top_words:
@@ -138,6 +138,8 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
         print(f"Commits:                {data.git.commits}")
         if data.git.top_contributor:
             print(f"Top Contributor:        {data.git.top_contributor}")
+        if data.git.bus_factor_risk:
+            print(c(f"Bus Factor Risk:        {data.git.bus_factor_risk}", "93"))
         if data.git.hotspot:
             print(f"🔥 Hotspot file:        {data.git.hotspot}")
     else:
@@ -156,11 +158,11 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
 
     if exec_time is not None:
         print(c(f"\n⚡ Scan completed in {exec_time:.2f} seconds", "90"))
-        
+
 def get_json_report(data: ReportData, large_file_threshold: int = 500) -> str:
     total_lines = sum(f.lines for f in data.files)
     large_files = sum(1 for f in data.files if f.lines > large_file_threshold)
-    
+
     out = {
         "repository": {
             "path": data.path,
@@ -207,13 +209,13 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
     high_nesting = sum(1 for f in data.files if f.metrics and f.metrics.max_nesting > 4)
     total_smells = sum(len(f.code_smells) for f in data.files if f.code_smells)
 
-    
+
     # HTML additions
     sorted_files = sorted(data.files, key=lambda x: x.lines, reverse=True)
     heaviest_files = sorted_files[:3]
-    
+
     heavy_html = "".join(f"<li><span>{f.path}</span> <strong>{f.lines:,} lines</strong></li>" for f in heaviest_files) if heaviest_files else "<li>None</li>"
-    
+
     security_html = ""
     if data.security:
         security_html = "".join(f"<tr><td>{s.filepath}:{s.line_number}</td><td><span class='badge fail'>{s.category}</span></td><td>{s.redacted_value}</td></tr>" for s in data.security)
@@ -258,28 +260,28 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
     }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px; }}
     .card {{
-        background: var(--bg-card); 
-        border: 1px solid var(--border); 
+        background: var(--bg-card);
+        border: 1px solid var(--border);
         padding: 20px;
     }}
     .card h3 {{ margin: 0 0 10px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: normal; }}
     .card .val {{ font-size: 24px; color: var(--text-main); }}
-    
+
     .section-wrapper {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }}
     @media (max-width: 768px) {{ .section-wrapper {{ grid-template-columns: 1fr; }} }}
-    
+
     .section {{ background: var(--bg-card); padding: 20px; border: 1px solid var(--border); }}
     .section.full {{ grid-column: 1 / -1; margin-bottom: 20px; }}
     .section h2 {{ margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; color: var(--text-main); border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-weight: normal; }}
-    
+
     ul.feature-list {{ list-style: none; padding: 0; margin: 0; }}
     ul.feature-list li {{ padding: 10px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; }}
     ul.feature-list li:last-child {{ border-bottom: none; padding-bottom: 0; }}
-    
+
     table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
     th, td {{ padding: 12px 10px; border-bottom: 1px dashed var(--border); text-align: left; font-weight: normal; }}
     th {{ color: var(--text-muted); text-transform: uppercase; font-size: 12px; }}
-    
+
     .badge {{ padding: 2px 6px; font-size: 12px; text-transform: uppercase; border: 1px solid var(--text-main); color: var(--text-main); }}
 </style>
 </head>
@@ -289,7 +291,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
         <h1>RepoDoctor</h1>
         <p class="target-path">{data.path}</p>
     </div>
-    
+
     <div class="grid">
         <div class="card">
             <h3>Health Score</h3>
@@ -308,7 +310,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
             <div class="val">{len(data.security)}</div>
         </div>
     </div>
-    
+
     <div class="section-wrapper">
         <div class="section">
             <h2>Maintainability</h2>
@@ -319,7 +321,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 <li><span>TODO / FIXME</span> <strong>{len(data.todos)}</strong></li>
             </ul>
         </div>
-        
+
         <div class="section">
             <h2>AI & Git Analytics</h2>
             <ul class="feature-list">
@@ -329,7 +331,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 <li><span>Git Hotspot</span> <strong>{data.git.hotspot if data.git.available and data.git.hotspot else "N/A"}</strong></li>
             </ul>
         </div>
-        
+
         <div class="section full">
             <h2>Project Structure Validation</h2>
             <table>
@@ -344,7 +346,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 {heavy_html}
             </ul>
         </div>
-        
+
         <div class="section full" style="margin-bottom: 40px;">
             <h2>Security Findings</h2>
             <table>
