@@ -23,11 +23,17 @@ repodoctor .
 ```
 
 
-## 🧠 What's New in v3.0 (The Intelligence Update)
+
+## 🧠 What's New in v3.0 (The Ultimate Intelligence Update)
+- **Live Web Dashboard (`--serve`)**: Instantly spins up a local web server on `localhost:8080` to view your repository health in a gorgeous browser UI.
 - **Interactive TUI (`--interactive`)**: A blazing fast, fully navigable terminal dashboard. Use your arrow keys to explore your repository's health natively!
+- **Auto-Documentation (`--docs`)**: Parses every function and class across your project to automatically generate a `docs/api_reference.md` file.
+- **The Blame Game (`--blame`)**: Runs a `git blame` on every Code Smell, Duplicate Block, and Security Flaw to name the exact developer who wrote it!
+- **God Function Profiler**: Mathematically calculates cyclomatic complexity to crown the single most confusing block of code in your project as the "🧟‍♂️ God Function."
 - **Git Time Machine (`--time-machine`)**: Run RepoDoctor across your last 10 commits to generate a historical ASCII timeline of your codebase health.
 - **Live AI Code Review (`--ai-review`)**: Connects natively to OpenAI or Gemini APIs to provide human-readable refactoring advice for your worst files directly in the terminal.
 - **Dead Code Eliminator**: Scans for variables and functions that are declared but never actually used anywhere in your project.
+- **Legal & Compliance Scanner (`--legal`)**: Parses `package.json` and `LICENSE` files to warn you of dangerous GPL/Copyleft licenses.
 - **Cloud/DevOps Security**: Deep scans `Dockerfile` and `docker-compose.yml` to prevent running containers as `root` and exposing dangerous ports.
 
 ## 🔥 What's New in v2.0 (The Enterprise Upgrade)
