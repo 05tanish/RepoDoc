@@ -22,6 +22,14 @@ Once installed, simply navigate to any repository and run:
 repodoctor .
 ```
 
+
+## 🧠 What's New in v3.0 (The Intelligence Update)
+- **Interactive TUI (`--interactive`)**: A blazing fast, fully navigable terminal dashboard. Use your arrow keys to explore your repository's health natively!
+- **Git Time Machine (`--time-machine`)**: Run RepoDoctor across your last 10 commits to generate a historical ASCII timeline of your codebase health.
+- **Live AI Code Review (`--ai-review`)**: Connects natively to OpenAI or Gemini APIs to provide human-readable refactoring advice for your worst files directly in the terminal.
+- **Dead Code Eliminator**: Scans for variables and functions that are declared but never actually used anywhere in your project.
+- **Cloud/DevOps Security**: Deep scans `Dockerfile` and `docker-compose.yml` to prevent running containers as `root` and exposing dangerous ports.
+
 ## 🔥 What's New in v2.0 (The Enterprise Upgrade)
 - **Auto-Fix Engine (`--fix`)**: Automatically rewrites code to fix safe smells (trailing whitespace, missing EOF newlines, missing JS `use strict`).
 - **ASCII Dependency Graph (`--graph`)**: Generates a beautiful ASCII tree showing exactly how your Python and JavaScript files import each other.
