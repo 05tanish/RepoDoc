@@ -1,4 +1,14 @@
 import sys
+
+try:
+    pass
+    from .mega import run_speak, run_forecast, run_gamify, run_plagiarism, run_chaos, run_architecture, run_rage, run_watch, run_autocommit, run_heatmap, run_p2p, run_typosquat, run_gentests, run_explain_regex, run_schema, run_slides, run_play
+    from .tui import launch_tui
+    from .serve import start_server
+    from .docsgen import generate_docs
+    from .legal import scan_legal
+except ImportError:
+    pass
 import os
 import time
 import re
@@ -205,12 +215,42 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         with contextlib.redirect_stdout(f_buf):
             use_color = not args.no_color and sys.stdout.isatty()
             if getattr(args, "interactive", False):
-            from .tui import launch_tui
-            launch_tui({"score": 100})
-            sys.exit(0)
+                launch_tui({"score": 100})
+                sys.exit(0)
+
+        
+        mega_output = []
+        if getattr(args, "forecast", False): mega_output.append(run_forecast(files))
+        if getattr(args, "gamify", False): mega_output.append(run_gamify(root_path))
+        if getattr(args, "plagiarism", False): mega_output.append(run_plagiarism(files))
+        if getattr(args, "chaos", False): mega_output.append(run_chaos(files))
+        if getattr(args, "architecture", False): mega_output.append(run_architecture(files, root_path))
+        if getattr(args, "rage", False): mega_output.append(run_rage(root_path))
+        if getattr(args, "autocommit", False): mega_output.append(run_autocommit(root_path))
+        if getattr(args, "heatmap", False): mega_output.append(run_heatmap(files))
+        if getattr(args, "typosquat", False): mega_output.append(run_typosquat(files))
+        if getattr(args, "gen_tests", False): mega_output.append(run_gentests(files, root_path))
+        if getattr(args, "explain_regex", False): mega_output.append(run_explain_regex(files))
+        if getattr(args, "schema", False): mega_output.append(run_schema(files))
+        if getattr(args, "slides", False): mega_output.append(run_slides(root_path))
+        if getattr(args, "play", False): mega_output.append(run_play())
+        
+        if mega_output:
+            terminal_report += "\n\n" + "\n".join(mega_output) + "\n"
             
+        if getattr(args, "speak", False): run_speak(score)
+        if getattr(args, "watch", False): 
+            print(run_watch())
+            try:
+                while True: time.sleep(1)
+            except KeyboardInterrupt: pass
+        if getattr(args, "p2p", False): 
+            print(run_p2p())
+            try:
+                while True: time.sleep(1)
+            except KeyboardInterrupt: pass
         print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
-            if getattr(args, "fix", False) and fixed_count > 0:
+        if getattr(args, "fix", False) and fixed_count > 0:
                 print(f"\n✨ Auto-Fix Engine: Successfully fixed {fixed_count} file(s).")
         terminal_report = f_buf.getvalue()
 

@@ -24,6 +24,7 @@ MODULES = [
     'blame.py',
     'docsgen.py',
     'legal.py',
+    'mega.py',
     'ai.py',
     'timemachine.py',
     'tui.py',
@@ -54,6 +55,7 @@ def build():
         for line in lines:
             # Skip relative imports within the package
             if re.match(r'^\s*from\s+\..+\s+import\s+', line):
+                filtered_lines.append(re.sub(r'from\s+\..+\s+import', '# from . import', line))
                 continue
             # Collect standard library imports
             if line.startswith('import ') or line.startswith('from '):
