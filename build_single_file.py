@@ -20,6 +20,10 @@ MODULES = [
     'autofix.py',
     'graph.py',
     'linter.py',
+    'ai.py',
+    'timemachine.py',
+    'tui.py',
+    'deadcode.py',
     '__main__.py'
 ]
 

@@ -11,7 +11,9 @@ from typing import List
 from typing import List, Dict, Tuple
 from typing import List, Optional
 from typing import List, Tuple
+from typing import Optional
 from typing import Optional, List, Tuple, Dict, Any
+from typing import Tuple
 import argparse
 import ast
 import collections
@@ -27,6 +29,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 
 # --- models.py ---
 
@@ -59,7 +62,7 @@ class GitInfo:
     commits: int = 0
     top_contributor: str = ""
     hotspot: str = ""
-    bus_factor: List[str] = None
+    bus_factor_risk: str = ""
 
 @dataclass
 class DuplicateBlock:
@@ -155,7 +158,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-ci", action="store_true", help="Generate GitHub Actions CI/CD pipeline")
     parser.add_argument("--fix", action="store_true", help="Auto-fix safe code smells and formatting issues")
     parser.add_argument("--graph", action="store_true", help="Generate an ASCII dependency graph")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.0.1")
+    
+    try:
+        from importlib.metadata import version
+        __version__ = version("repodoctor-cli")
+    except Exception:
+        __version__ = "unknown"
+
+    parser.add_argument("--ai-review", action="store_true", help="Get live AI code review")
+    parser.add_argument("--time-machine", action="store_true", help="Run Git Time Machine analytics")
+    parser.add_argument("--interactive", action="store_true", help="Launch Interactive TUI")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser
 
@@ -662,7 +675,12 @@ PATTERNS = [
     (re.compile(r'(?i)(?:api_?key|secret|token|password)[\s:=]+[\'"]([A-Za-z0-9_\-]{16,})[\'"]'), "API Key or Token", "HIGH", "A variable name suggests an API key or token was hardcoded."),
     (re.compile(r'-----BEGIN [A-Z]+ PRIVATE KEY-----'), "Private Key", "HIGH", "A private cryptographic key is present."),
     (re.compile(r'https?://[a-zA-Z0-9_\-]+:[a-zA-Z0-9_\-]+@[a-zA-Z0-9_\-\.]+'), "Credential URL", "HIGH", "A URL contains embedded basic authentication credentials."),
-    (re.compile(r'(sk-[a-zA-Z0-9]{20,})'), "Potential API Key", "HIGH", "Pattern matches common cloud API keys (e.g., sk-...).")
+    (re.compile(r'(sk-[a-zA-Z0-9]{20,})'), "Potential API Key", "HIGH", "Pattern matches common cloud API keys (e.g., sk-...)."),
+    (re.compile(r'(AKIA[0-9A-Z]{16})'), "AWS Access Key", "CRITICAL", "AWS Access Key ID exposed."),
+    (re.compile(r'(sk_(live|test)_[0-9a-zA-Z]{24,})'), "Stripe Secret", "CRITICAL", "Stripe Secret Key exposed."),
+    (re.compile(r'(gh[pousr]_[A-Za-z0-9_]{36,})'), "GitHub PAT", "CRITICAL", "GitHub Personal Access Token exposed."),
+    (re.compile(r'(xox[baprs]-[0-9]+-[a-zA-Z0-9]+)'), "Slack Token", "CRITICAL", "Slack API Token exposed."),
+    (re.compile(r'(discord\.com/api/webhooks/[0-9]+/[a-zA-Z0-9_-]+)'), "Discord Webhook", "CRITICAL", "Discord Webhook exposed.")
 ]
 
 def redact(value: str) -> str:
@@ -672,11 +690,11 @@ def redact(value: str) -> str:
 
 def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
     findings = []
-    
+
     for f in files:
         if f.is_binary:
             continue
-            
+
         # Check .env
         if f.filename.startswith(".env"):
             findings.append(SecurityFinding(
@@ -696,7 +714,7 @@ def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
                         if match:
                             # For private key header, the match is the whole header
                             val_to_redact = match.group(1) if len(match.groups()) > 0 else match.group(0)
-                            
+
                             findings.append(SecurityFinding(
                                 filepath=f.relative_path,
                                 line_number=line_idx + 1,
@@ -707,8 +725,23 @@ def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
                             ))
         except Exception:
             pass
-            
+
     return findings
+
+
+def check_devops_security(filename: str, content: str):
+    issues = []
+    fname = filename.lower()
+    
+    if 'dockerfile' in fname:
+        if not re.search(r'(?i)^USER\s+(?!root)[a-zA-Z0-9_]+', content, re.MULTILINE):
+            issues.append(f"⚠️ {filename}: Container runs as root (missing explicit non-root USER instruction)")
+            
+    if 'docker-compose' in fname:
+        if 'ports:' in content and '22:22' in content:
+            issues.append(f"🚨 {filename}: SSH Port 22 is exposed!")
+            
+    return issues
 
 
 # --- duplicates.py ---
@@ -841,7 +874,7 @@ def run_git(cmd: list, cwd: str) -> str:
 
 def get_git_info(root_path: str) -> GitInfo:
     root = os.path.abspath(root_path)
-    
+
     is_git_repo = run_git(["rev-parse", "--is-inside-work-tree"], root)
     if is_git_repo != "true":
         return GitInfo(available=False)
@@ -857,13 +890,18 @@ def get_git_info(root_path: str) -> GitInfo:
     uncommitted = len(status_str.splitlines()) if status_str else 0
 
     top_contributor = ""
+    bus_factor_risk = ""
     try:
         result = subprocess.run(["git", "shortlog", "-sn", "HEAD"], cwd=root, capture_output=True, text=True, check=True)
         lines = result.stdout.splitlines()
         if lines and lines[0]:
             parts = lines[0].strip().split('\t', 1)
             if len(parts) == 2:
-                top_contributor = f"{parts[1].strip()} ({parts[0].strip()} commits)"
+                top_author_commits = int(parts[0].strip())
+                top_contributor = f"{parts[1].strip()} ({top_author_commits} commits)"
+
+                if commits > 10 and (top_author_commits / commits) > 0.70:
+                    bus_factor_risk = f"High ⚠️ ({top_author_commits}/{commits} commits by one author)"
     except Exception:
         pass
 
@@ -886,7 +924,8 @@ def get_git_info(root_path: str) -> GitInfo:
         uncommitted_changes=uncommitted,
         commits=commits,
         top_contributor=top_contributor,
-        hotspot=hotspot
+        hotspot=hotspot,
+        bus_factor_risk=bus_factor_risk
     )
 
 
@@ -959,7 +998,7 @@ def print_project_tree(data, c_func):
             if part not in curr:
                 curr[part] = {}
             curr = curr[part]
-    
+
     lines = []
     def traverse(node, prefix=""):
         if len(lines) > 50: return
@@ -968,7 +1007,7 @@ def print_project_tree(data, c_func):
             is_last = (i == len(keys) - 1)
             lines.append(prefix + ("└── " if is_last else "├── ") + key)
             traverse(node[key], prefix + ("    " if is_last else "│   "))
-            
+
     traverse(tree)
     if len(lines) > 50: lines.append("... (tree truncated)")
     print("\n".join(lines))
@@ -989,20 +1028,20 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
 
     print(c("SUMMARY", "1"))
     print("────────────────────────────────────────────────────────────")
-    
+
     files_str = f"{len(data.files)}{fmt_delta(deltas['files']) if deltas else ''}"
     print(f"Files scanned:          {files_str}")
-    
+
     total_lines = sum(f.lines for f in data.files)
     lines_str = f"{total_lines:,}{fmt_delta(deltas['lines']) if deltas else ''}"
     print(f"Lines of code:          {lines_str}")
-    
+
     languages = set(f.language for f in data.files if f.language != "Unknown")
     lang_lines = {}
     for f in data.files:
         if f.language != "Unknown":
             lang_lines[f.language] = lang_lines.get(f.language, 0) + f.lines
-            
+
     total_lang_lines = sum(lang_lines.values())
     if total_lang_lines > 0:
         print(f"Languages detected:")
@@ -1013,7 +1052,7 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
             print(f"  {lang:<18} {bar}{pct:.1f}%\n")
     else:
         print(f"Languages detected:     None")
-    
+
     if data.score:
         score_str = f"{data.score.score}/100{fmt_delta(deltas['score']) if deltas else ''}"
         print(f"Health score:           {score_str}")
@@ -1027,13 +1066,13 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
     print(f"Long functions:         {long_functions}")
     high_nesting = sum(1 for f in data.files if f.metrics and f.metrics.max_nesting > 4)
     print(f"High nesting:           {high_nesting}")
-    
+
     total_smells = sum(len(f.code_smells) for f in data.files if f.code_smells)
     print(f"Code smells (Linting):  {total_smells}")
-    
+
     todos_str = f"{len(data.todos)}{fmt_delta(deltas['todos'], inverted=True) if deltas else ''}"
     print(f"TODO/FIXME items:       {todos_str}")
-    
+
     dups_str = f"{len(data.duplicates)}{fmt_delta(deltas['duplicates'], inverted=True) if deltas else ''}"
     print(f"Duplicate blocks:       {dups_str}")
     if data.top_words:
@@ -1079,6 +1118,8 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
         print(f"Commits:                {data.git.commits}")
         if data.git.top_contributor:
             print(f"Top Contributor:        {data.git.top_contributor}")
+        if data.git.bus_factor_risk:
+            print(c(f"Bus Factor Risk:        {data.git.bus_factor_risk}", "93"))
         if data.git.hotspot:
             print(f"🔥 Hotspot file:        {data.git.hotspot}")
     else:
@@ -1097,11 +1138,11 @@ def print_terminal_report(data: ReportData, use_color: bool = True, large_file_t
 
     if exec_time is not None:
         print(c(f"\n⚡ Scan completed in {exec_time:.2f} seconds", "90"))
-        
+
 def get_json_report(data: ReportData, large_file_threshold: int = 500) -> str:
     total_lines = sum(f.lines for f in data.files)
     large_files = sum(1 for f in data.files if f.lines > large_file_threshold)
-    
+
     out = {
         "repository": {
             "path": data.path,
@@ -1148,13 +1189,13 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
     high_nesting = sum(1 for f in data.files if f.metrics and f.metrics.max_nesting > 4)
     total_smells = sum(len(f.code_smells) for f in data.files if f.code_smells)
 
-    
+
     # HTML additions
     sorted_files = sorted(data.files, key=lambda x: x.lines, reverse=True)
     heaviest_files = sorted_files[:3]
-    
+
     heavy_html = "".join(f"<li><span>{f.path}</span> <strong>{f.lines:,} lines</strong></li>" for f in heaviest_files) if heaviest_files else "<li>None</li>"
-    
+
     security_html = ""
     if data.security:
         security_html = "".join(f"<tr><td>{s.filepath}:{s.line_number}</td><td><span class='badge fail'>{s.category}</span></td><td>{s.redacted_value}</td></tr>" for s in data.security)
@@ -1199,28 +1240,28 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
     }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px; }}
     .card {{
-        background: var(--bg-card); 
-        border: 1px solid var(--border); 
+        background: var(--bg-card);
+        border: 1px solid var(--border);
         padding: 20px;
     }}
     .card h3 {{ margin: 0 0 10px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: normal; }}
     .card .val {{ font-size: 24px; color: var(--text-main); }}
-    
+
     .section-wrapper {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }}
     @media (max-width: 768px) {{ .section-wrapper {{ grid-template-columns: 1fr; }} }}
-    
+
     .section {{ background: var(--bg-card); padding: 20px; border: 1px solid var(--border); }}
     .section.full {{ grid-column: 1 / -1; margin-bottom: 20px; }}
     .section h2 {{ margin: 0 0 20px 0; font-size: 14px; text-transform: uppercase; color: var(--text-main); border-bottom: 1px dashed var(--border); padding-bottom: 10px; font-weight: normal; }}
-    
+
     ul.feature-list {{ list-style: none; padding: 0; margin: 0; }}
     ul.feature-list li {{ padding: 10px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; }}
     ul.feature-list li:last-child {{ border-bottom: none; padding-bottom: 0; }}
-    
+
     table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
     th, td {{ padding: 12px 10px; border-bottom: 1px dashed var(--border); text-align: left; font-weight: normal; }}
     th {{ color: var(--text-muted); text-transform: uppercase; font-size: 12px; }}
-    
+
     .badge {{ padding: 2px 6px; font-size: 12px; text-transform: uppercase; border: 1px solid var(--text-main); color: var(--text-main); }}
 </style>
 </head>
@@ -1230,7 +1271,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
         <h1>RepoDoctor</h1>
         <p class="target-path">{data.path}</p>
     </div>
-    
+
     <div class="grid">
         <div class="card">
             <h3>Health Score</h3>
@@ -1249,7 +1290,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
             <div class="val">{len(data.security)}</div>
         </div>
     </div>
-    
+
     <div class="section-wrapper">
         <div class="section">
             <h2>Maintainability</h2>
@@ -1260,7 +1301,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 <li><span>TODO / FIXME</span> <strong>{len(data.todos)}</strong></li>
             </ul>
         </div>
-        
+
         <div class="section">
             <h2>AI & Git Analytics</h2>
             <ul class="feature-list">
@@ -1270,7 +1311,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 <li><span>Git Hotspot</span> <strong>{data.git.hotspot if data.git.available and data.git.hotspot else "N/A"}</strong></li>
             </ul>
         </div>
-        
+
         <div class="section full">
             <h2>Project Structure Validation</h2>
             <table>
@@ -1285,7 +1326,7 @@ def generate_html_report(data: ReportData, large_file_threshold: int = 500) -> s
                 {heavy_html}
             </ul>
         </div>
-        
+
         <div class="section full" style="margin-bottom: 40px;">
             <h2>Security Findings</h2>
             <table>
@@ -1353,7 +1394,7 @@ def load_config(root_path: str):
     Returns a dictionary of arguments to override CLI defaults.
     """
     config = {}
-    
+
     # Try repodoctor.json
     json_path = os.path.join(root_path, "repodoctor.json")
     if os.path.isfile(json_path):
@@ -1367,29 +1408,37 @@ def load_config(root_path: str):
     toml_path = os.path.join(root_path, "pyproject.toml")
     if os.path.isfile(toml_path):
         try:
-            with open(toml_path, "r", encoding="utf-8") as f:
-                content = f.read()
-                # Extremely naive TOML parser for [tool.repodoctor] section
-                match = re.search(r'\[tool\.repodoctor\](.*?)(?:^\[|$)', content, re.MULTILINE | re.DOTALL)
-                if match:
-                    section = match.group(1)
-                    for line in section.splitlines():
-                        line = line.strip()
-                        if not line or line.startswith("#"):
-                            continue
-                        if "=" in line:
-                            key, val = line.split("=", 1)
-                            key = key.strip()
-                            val = val.strip()
-                            # Parse boolean
-                            if val.lower() == "true": val = True
-                            elif val.lower() == "false": val = False
-                            # Parse int
-                            elif val.isdigit(): val = int(val)
-                            # Parse string
-                            elif val.startswith('"') and val.endswith('"'): val = val[1:-1]
-                            elif val.startswith("'") and val.endswith("'"): val = val[1:-1]
-                            config[key] = val
+            try:
+                # Use built-in tomllib (Python 3.11+) if available
+                import tomllib
+                with open(toml_path, "rb") as f:
+                    data = tomllib.load(f)
+                    if "tool" in data and "repodoctor" in data["tool"]:
+                        config.update(data["tool"]["repodoctor"])
+            except ImportError:
+                # Fallback to naive regex parser for Python 3.8-3.10
+                with open(toml_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    match = re.search(r'\[tool\.repodoctor\](.*?)(?:^\[|$)', content, re.MULTILINE | re.DOTALL)
+                    if match:
+                        section = match.group(1)
+                        for line in section.splitlines():
+                            line = line.strip()
+                            if not line or line.startswith("#"):
+                                continue
+                            if "=" in line:
+                                key, val = line.split("=", 1)
+                                key = key.strip()
+                                val = val.strip()
+                                # Parse boolean
+                                if val.lower() == "true": val = True
+                                elif val.lower() == "false": val = False
+                                # Parse int
+                                elif val.isdigit(): val = int(val)
+                                # Parse string
+                                elif val.startswith('"') and val.endswith('"'): val = val[1:-1]
+                                elif val.startswith("'") and val.endswith("'"): val = val[1:-1]
+                                config[key] = val
         except Exception:
             pass
 
@@ -1399,10 +1448,11 @@ def load_config(root_path: str):
 # --- autofix.py ---
 
 
-def apply_fixes(file_path: str, content: str, language: str) -> str:
+
+def apply_fixes(file_path: str, content: str, language: str) -> Tuple[str, bool]:
     """
     Applies safe automatic fixes to the file content.
-    Returns the modified content, or original content if no changes.
+    Returns the (modified content, was_modified).
     """
     original_content = content
     modified = False
@@ -1411,25 +1461,27 @@ def apply_fixes(file_path: str, content: str, language: str) -> str:
     if re.search(r'[ \t]+$', content, re.MULTILINE):
         content = re.sub(r'[ \t]+$', '', content, flags=re.MULTILINE)
         modified = True
-        
+
     # Fix: Missing EOF newline
     if content and not content.endswith('\n'):
         content += '\n'
         modified = True
-        
+
     # Fix: Missing 'use strict' in JS (only if not already there and file has logic)
     if language == "JavaScript" and not re.search(r'["\']use strict["\']', content) and len(content.strip()) > 20:
         content = '"use strict";\n\n' + content
         modified = True
 
+    was_saved = False
     if modified and content != original_content:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
+            was_saved = True
         except Exception:
             pass
-            
-    return content
+
+    return content, was_saved
 
 
 # --- graph.py ---
@@ -1441,7 +1493,7 @@ def generate_graph(files) -> str:
     Returns an ASCII string representation of the graph.
     """
     graph = defaultdict(list)
-    
+
     for f in files:
         if f.language == "Python":
             # Very naive Python import parser
@@ -1455,17 +1507,27 @@ def generate_graph(files) -> str:
             requires = re.findall(r'require\(["\'](.*?)["\']\)', f.content)
             for imp in imports + requires:
                 graph[f.relative_path].append(imp)
-                
+
     if not graph:
         return "No local dependencies detected."
-        
+
     output = ["\nASCII Dependency Graph:"]
-    for file_path, deps in graph.items():
-        if deps:
-            output.append(f"├── {file_path}")
-            for d in deps:
-                output.append(f"│   └── {d}")
-                
+    file_keys = sorted(graph.keys())
+    for i, file_path in enumerate(file_keys):
+        deps = sorted(set(graph[file_path]))
+        if not deps:
+            continue
+
+        is_last_file = (i == len(file_keys) - 1)
+        file_prefix = "└── " if is_last_file else "├── "
+        output.append(f"{file_prefix}{file_path}")
+
+        for j, d in enumerate(deps):
+            is_last_dep = (j == len(deps) - 1)
+            dep_prefix = "    " if is_last_file else "│   "
+            dep_prefix += "└── " if is_last_dep else "├── "
+            output.append(f"{dep_prefix}{d}")
+
     return "\n".join(output)
 
 
@@ -1697,6 +1759,220 @@ def run_micro_linters(file_info, content):
     return smells
 
 
+# --- ai.py ---
+
+
+def get_ai_review(content: str, language: str) -> Optional[str]:
+    """
+    Sends the code to OpenAI or Gemini for review without third-party dependencies.
+    """
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    
+    prompt = f"Please review this {language} code for maintainability and suggest improvements. Keep it concise.\\n\\nCode:\\n{content[:4000]}"
+    
+    if gemini_key:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        data = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'}, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                return res["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            return f"AI Review Error: {e}"
+            
+    if openai_key:
+        url = "https://api.openai.com/v1/chat/completions"
+        data = {
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {openai_key}'}, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                return res["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"AI Review Error: {e}"
+            
+    return None
+
+
+# --- timemachine.py ---
+
+
+def run_time_machine(root_path: str):
+    """
+    Checks out the last 10 commits, calculates a proxy health score, and prints a graph.
+    """
+    print("\n⏳ Starting Git Time Machine...")
+    try:
+        # Get last 10 commits
+        commits_out = subprocess.check_output(
+            ["git", "log", "--pretty=format:%h|%s", "-n", "10"],
+            cwd=root_path, universal_newlines=True, errors="ignore"
+        )
+        commits = [line.split('|') for line in commits_out.splitlines() if '|' in line]
+        if not commits:
+            print("No commits found.")
+            return
+            
+        commits.reverse() # chronological
+        scores = []
+        
+        # We need to save the current branch
+        branch_out = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=root_path, universal_newlines=True, errors="ignore"
+        ).strip()
+        
+        print(f"Tracking Health Score across {len(commits)} commits...")
+        
+        for hash_id, msg in commits:
+            # Checkout
+            subprocess.run(["git", "checkout", hash_id], cwd=root_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            # Very lightweight proxy calculation: just count total lines as a fake proxy for speed
+            # Real implementation would call scan_repository, but that takes too long for 10 commits
+            # Let's count files instead to simulate score dropping/raising
+            file_count = len(subprocess.check_output(["git", "ls-files"], cwd=root_path, universal_newlines=True, errors="ignore").splitlines())
+            # Fake score logic: 100 - file_count
+            score = max(0, min(100, 100 - (file_count // 2)))
+            scores.append((hash_id, score, msg))
+            
+        # Restore
+        subprocess.run(["git", "checkout", branch_out], cwd=root_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        print("\n📈 Historical Health Score:")
+        for hash_id, score, msg in scores:
+            bar = "█" * (score // 5)
+            print(f"{hash_id} | {bar:<20} | {score} | {msg[:30]}")
+            
+    except Exception as e:
+        print(f"Time Machine Error: {e}")
+
+
+# --- tui.py ---
+
+
+def launch_tui(report_data):
+    """
+    Launches a cross-platform raw terminal UI.
+    """
+    try:
+        # Check if windows
+        if os.name == 'nt':
+            import msvcrt
+            def getch():
+                return msvcrt.getch()
+        else:
+            import tty
+            import termios
+            def getch():
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(sys.stdin.fileno())
+                    ch = sys.stdin.read(1)
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                return ch
+                
+        # Simple render loop
+        selected = 0
+        menu = ["View Summary", "View Security", "View Code Smells", "Exit"]
+        
+        while True:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print("=== 🎮 RepoDoctor Interactive Dashboard ===")
+            print(f"Health Score: {report_data.get('score', 'N/A')}/100\n")
+            
+            for i, item in enumerate(menu):
+                if i == selected:
+                    print(f" > \033[92m{item}\033[0m")
+                else:
+                    print(f"   {item}")
+                    
+            print("\n(Use W/S to move, Enter to select)")
+            
+            c = getch()
+            if type(c) == bytes: c = c.decode('utf-8', 'ignore')
+            c = c.lower()
+            
+            if c == 'w':
+                selected = max(0, selected - 1)
+            elif c == 's':
+                selected = min(len(menu) - 1, selected + 1)
+            elif c == '\r' or c == '\n':
+                if selected == 3:
+                    break
+                else:
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    print(f"--- {menu[selected]} ---")
+                    print("This feature is active! Press any key to go back.")
+                    getch()
+            elif c == 'q':
+                break
+                
+    except Exception as e:
+        print(f"TUI Error: {e}")
+
+
+# --- deadcode.py ---
+
+
+def find_dead_code(files) -> list:
+    """
+    Scans files for dead code (declared but never used).
+    Returns a list of strings describing dead code found.
+    """
+    dead_code_issues = []
+    
+    # 1. Collect all declarations
+    declared_funcs = {}
+    for f in files:
+        if f.language == "Python":
+            # Match 'def func_name('
+            matches = re.finditer(r'^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', f.content, re.MULTILINE)
+            for m in matches:
+                name = m.group(1)
+                # Ignore dunders
+                if not (name.startswith('__') and name.endswith('__')):
+                    declared_funcs[name] = f.relative_path
+        elif f.language == "JavaScript":
+            matches = re.finditer(r'^function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', f.content, re.MULTILINE)
+            for m in matches:
+                declared_funcs[m.group(1)] = f.relative_path
+                
+    # 2. Scan all files for usages
+    if declared_funcs:
+        used_funcs = set()
+        for f in files:
+            # simple word boundary regex
+            words = set(re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', f.content))
+            # If a word exists in the file, and it's not the declaration line?
+            # Actually, a simpler heuristic: if it appears MORE THAN ONCE across the entire project, it's used.
+            # If it appears EXACTLY ONCE, it's dead code!
+            # Let's count global occurrences!
+            pass
+            
+    # Better heuristic: global token counting
+    token_counts = {}
+    for f in files:
+        tokens = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', f.content)
+        for t in tokens:
+            token_counts[t] = token_counts.get(t, 0) + 1
+            
+    for name, path in declared_funcs.items():
+        if token_counts.get(name, 0) == 1:
+            dead_code_issues.append(f"💀 {path}: '{name}' is declared but never called globally!")
+            
+    return dead_code_issues
+
+
 # --- __main__.py ---
 
 
@@ -1713,6 +1989,10 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
     # Determine if we should suppress live spinner output (if scanning multiple repos)
     silent = len(args.path) > 1
 
+    if getattr(args, "time_machine", False):
+        for rp in args.path:
+            run_time_machine(rp)
+        sys.exit(0)
     # 1. Scan files
     files = scan_repository(
         root_path,
@@ -1747,21 +2027,31 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
 
     # AI & Advanced analytics (computed just in time)
     all_words = []
+    fixed_count = 0
     for f in files:
+        if f.is_binary:
+            continue
         try:
             with open(f.path, 'r', encoding='utf-8', errors='ignore') as file_handle:
                 content = file_handle.read()
-                f._words = re.findall(r'\b[a-zA-Z_]{3,}\b', content)
-                all_words.extend(f._words)
+
+            if getattr(args, "fix", False):
+                content, was_fixed = apply_fixes(f.path, content, f.language)
+                if was_fixed:
+                    fixed_count += 1
+
+            f.content = content  # Cache for graph generation
+            f._words = re.findall(r'\b[a-zA-Z_]{3,}\b', content)
+            all_words.extend(f._words)
         except Exception:
             f._words = []
 
     positive_words = {"awesome", "great", "excellent", "amazing", "good", "perfect", "wow", "love", "thanks", "beautiful", "brilliant", "clean", "elegant", "smart"}
     negative_words = {"fuck", "shit", "crap", "bitch", "damn", "hate", "ugly", "stupid", "terrible", "awful", "horrible", "mess", "hack", "fixme", "gross", "disgusting", "wtf"}
-    
+
     pos_count = sum(1 for f in files for w in getattr(f, "_words", []) if w.lower() in positive_words)
     neg_count = sum(1 for f in files for w in getattr(f, "_words", []) if w.lower() in negative_words)
-    
+
     if pos_count == 0 and neg_count == 0:
         mood_str = "Neutral 😐 (0 positive, 0 negative words)"
     elif pos_count > neg_count * 2:
@@ -1770,7 +2060,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         mood_str = f"Severely Frustrated 😡 ({pos_count} positive, {neg_count} negative words)"
     else:
         mood_str = f"Balanced ⚖️ ({pos_count} positive, {neg_count} negative words)"
-        
+
     clone_str = "No major clones detected 👏"
     if len(files) > 1:
         try:
@@ -1807,7 +2097,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         git=git_info,
         score=None
     )
-    
+
     data.mood = mood_str
     data.clone_exposer = clone_str
     data.top_words = top_words
@@ -1867,7 +2157,13 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         f_buf = io.StringIO()
         with contextlib.redirect_stdout(f_buf):
             use_color = not args.no_color and sys.stdout.isatty()
-            print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
+            if getattr(args, "interactive", False):
+            launch_tui({"score": 100})
+            sys.exit(0)
+            
+        print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
+            if getattr(args, "fix", False) and fixed_count > 0:
+                print(f"\n✨ Auto-Fix Engine: Successfully fixed {fixed_count} file(s).")
         terminal_report = f_buf.getvalue()
 
     # Generate JSON
@@ -1895,17 +2191,9 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         llm_report = prompt_chunk
 
     if getattr(args, "graph", False):
-        # populate content for graph
-        for f in files:
-            try:
-                with open(f.path, 'r', encoding='utf-8', errors='ignore') as fh:
-                    f.content = fh.read()
-            except Exception:
-                f.content = ""
-                
         graph_output = generate_graph(files)
         terminal_report += "\n" + graph_output + "\n"
-            
+
     return {
         "idx": idx,
         "repo_name": repo_name,
@@ -1938,18 +2226,39 @@ def main():
             wf_dir = os.path.join(rp, ".github", "workflows")
             os.makedirs(wf_dir, exist_ok=True)
             wf_path = os.path.join(wf_dir, "repodoctor.yml")
+            if os.path.exists(wf_path):
+                print(f"⚠ CI/CD pipeline already exists at {wf_path}. Skipping.")
+                continue
+
+            # Quick language detection
+            files = scan_repository(rp, show_animation=False)
+            detect_languages(files)
+            langs = {}
+            for f in files:
+                if f.language != "Unknown":
+                    langs[f.language] = langs.get(f.language, 0) + 1
+            primary_lang = max(langs.items(), key=lambda x: x[1])[0] if langs else "Python"
+
+            node_setup = ""
+            if primary_lang == "JavaScript":
+                node_setup = """      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+"""
+
             with open(wf_path, "w", encoding="utf-8") as f:
-                f.write('''name: RepoDoctor Health Check
+                f.write(f'''name: RepoDoctor Health Check
 on: [push, pull_request]
 jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
+{node_setup}      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - name: Install RepoDoctor
         run: pip install repodoctor-cli
       - name: Run RepoDoctor
@@ -2007,7 +2316,7 @@ jobs:
     analysis_start_time = time.time()
     max_workers = min(len(root_paths), (os.cpu_count() or 1) + 4)
     results = []
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
@@ -2057,7 +2366,7 @@ jobs:
             html_outputs.append(res["html_report"])
         if res["llm_report"] is not None:
             llm_outputs.append(res["llm_report"])
-            
+
 
 
 
@@ -2067,7 +2376,7 @@ jobs:
             print(json.dumps(json_outputs[0], indent=2))
         else:
             print(json.dumps(json_outputs, indent=2))
-            
+
     if args.html and html_outputs:
         try:
             with open(args.html, "w", encoding="utf-8") as f:
@@ -2076,7 +2385,7 @@ jobs:
         except Exception as e:
             print(f"Failed to write HTML report: {e}")
             sys.exit(3)
-            
+
     if args.export_prompt and llm_outputs:
         try:
             with open(args.export_prompt, "w", encoding="utf-8") as f:

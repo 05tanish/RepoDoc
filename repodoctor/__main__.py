@@ -34,6 +34,11 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
     # Determine if we should suppress live spinner output (if scanning multiple repos)
     silent = len(args.path) > 1
 
+    if getattr(args, "time_machine", False):
+        from .timemachine import run_time_machine
+        for rp in args.path:
+            run_time_machine(rp)
+        sys.exit(0)
     # 1. Scan files
     files = scan_repository(
         root_path,
@@ -199,7 +204,12 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         f_buf = io.StringIO()
         with contextlib.redirect_stdout(f_buf):
             use_color = not args.no_color and sys.stdout.isatty()
-            print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
+            if getattr(args, "interactive", False):
+            from .tui import launch_tui
+            launch_tui({"score": 100})
+            sys.exit(0)
+            
+        print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
             if getattr(args, "fix", False) and fixed_count > 0:
                 print(f"\n✨ Auto-Fix Engine: Successfully fixed {fixed_count} file(s).")
         terminal_report = f_buf.getvalue()

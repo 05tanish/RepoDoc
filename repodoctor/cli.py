@@ -48,6 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
     except Exception:
         __version__ = "unknown"
 
+    parser.add_argument("--ai-review", action="store_true", help="Get live AI code review")
+    parser.add_argument("--time-machine", action="store_true", help="Run Git Time Machine analytics")
+    parser.add_argument("--interactive", action="store_true", help="Launch Interactive TUI")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser

@@ -59,3 +59,18 @@ def scan_security(files: List[FileInfo]) -> List[SecurityFinding]:
             pass
 
     return findings
+
+
+def check_devops_security(filename: str, content: str):
+    issues = []
+    fname = filename.lower()
+    
+    if 'dockerfile' in fname:
+        if not re.search(r'(?i)^USER\s+(?!root)[a-zA-Z0-9_]+', content, re.MULTILINE):
+            issues.append(f"⚠️ {filename}: Container runs as root (missing explicit non-root USER instruction)")
+            
+    if 'docker-compose' in fname:
+        if 'ports:' in content and '22:22' in content:
+            issues.append(f"🚨 {filename}: SSH Port 22 is exposed!")
+            
+    return issues
