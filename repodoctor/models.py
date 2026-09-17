@@ -29,7 +29,7 @@ class GitInfo:
     commits: int = 0
     top_contributor: str = ""
     hotspot: str = ""
-    bus_factor: List[str] = None
+    bus_factor_risk: str = ""
 
 @dataclass
 class DuplicateBlock:

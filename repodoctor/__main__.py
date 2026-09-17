@@ -68,21 +68,32 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
 
     # AI & Advanced analytics (computed just in time)
     all_words = []
+    fixed_count = 0
     for f in files:
+        if f.is_binary:
+            continue
         try:
             with open(f.path, 'r', encoding='utf-8', errors='ignore') as file_handle:
                 content = file_handle.read()
-                f._words = re.findall(r'\b[a-zA-Z_]{3,}\b', content)
-                all_words.extend(f._words)
+
+            if getattr(args, "fix", False):
+                from .autofix import apply_fixes
+                content, was_fixed = apply_fixes(f.path, content, f.language)
+                if was_fixed:
+                    fixed_count += 1
+
+            f.content = content  # Cache for graph generation
+            f._words = re.findall(r'\b[a-zA-Z_]{3,}\b', content)
+            all_words.extend(f._words)
         except Exception:
             f._words = []
 
     positive_words = {"awesome", "great", "excellent", "amazing", "good", "perfect", "wow", "love", "thanks", "beautiful", "brilliant", "clean", "elegant", "smart"}
     negative_words = {"fuck", "shit", "crap", "bitch", "damn", "hate", "ugly", "stupid", "terrible", "awful", "horrible", "mess", "hack", "fixme", "gross", "disgusting", "wtf"}
-    
+
     pos_count = sum(1 for f in files for w in getattr(f, "_words", []) if w.lower() in positive_words)
     neg_count = sum(1 for f in files for w in getattr(f, "_words", []) if w.lower() in negative_words)
-    
+
     if pos_count == 0 and neg_count == 0:
         mood_str = "Neutral 😐 (0 positive, 0 negative words)"
     elif pos_count > neg_count * 2:
@@ -91,7 +102,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         mood_str = f"Severely Frustrated 😡 ({pos_count} positive, {neg_count} negative words)"
     else:
         mood_str = f"Balanced ⚖️ ({pos_count} positive, {neg_count} negative words)"
-        
+
     clone_str = "No major clones detected 👏"
     if len(files) > 1:
         try:
@@ -128,7 +139,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         git=git_info,
         score=None
     )
-    
+
     data.mood = mood_str
     data.clone_exposer = clone_str
     data.top_words = top_words
@@ -189,6 +200,8 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         with contextlib.redirect_stdout(f_buf):
             use_color = not args.no_color and sys.stdout.isatty()
             print_terminal_report(data, use_color, args.large_file_lines, deltas, repo_duration, getattr(args, 'tree', False))
+            if getattr(args, "fix", False) and fixed_count > 0:
+                print(f"\n✨ Auto-Fix Engine: Successfully fixed {fixed_count} file(s).")
         terminal_report = f_buf.getvalue()
 
     # Generate JSON
@@ -218,17 +231,9 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
 
     if getattr(args, "graph", False):
         from .graph import generate_graph
-        # populate content for graph
-        for f in files:
-            try:
-                with open(f.path, 'r', encoding='utf-8', errors='ignore') as fh:
-                    f.content = fh.read()
-            except Exception:
-                f.content = ""
-                
         graph_output = generate_graph(files)
         terminal_report += "\n" + graph_output + "\n"
-            
+
     return {
         "idx": idx,
         "repo_name": repo_name,
@@ -262,18 +267,41 @@ def main():
             wf_dir = os.path.join(rp, ".github", "workflows")
             os.makedirs(wf_dir, exist_ok=True)
             wf_path = os.path.join(wf_dir, "repodoctor.yml")
+            if os.path.exists(wf_path):
+                print(f"⚠ CI/CD pipeline already exists at {wf_path}. Skipping.")
+                continue
+
+            # Quick language detection
+            from .scanner import scan_repository
+            from .languages import detect_languages
+            files = scan_repository(rp, show_animation=False)
+            detect_languages(files)
+            langs = {}
+            for f in files:
+                if f.language != "Unknown":
+                    langs[f.language] = langs.get(f.language, 0) + 1
+            primary_lang = max(langs.items(), key=lambda x: x[1])[0] if langs else "Python"
+
+            node_setup = ""
+            if primary_lang == "JavaScript":
+                node_setup = """      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+"""
+
             with open(wf_path, "w", encoding="utf-8") as f:
-                f.write('''name: RepoDoctor Health Check
+                f.write(f'''name: RepoDoctor Health Check
 on: [push, pull_request]
 jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
+{node_setup}      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - name: Install RepoDoctor
         run: pip install repodoctor-cli
       - name: Run RepoDoctor
@@ -331,7 +359,7 @@ jobs:
     analysis_start_time = time.time()
     max_workers = min(len(root_paths), (os.cpu_count() or 1) + 4)
     results = []
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
@@ -381,7 +409,7 @@ jobs:
             html_outputs.append(res["html_report"])
         if res["llm_report"] is not None:
             llm_outputs.append(res["llm_report"])
-            
+
 
 
 
@@ -391,7 +419,7 @@ jobs:
             print(json.dumps(json_outputs[0], indent=2))
         else:
             print(json.dumps(json_outputs, indent=2))
-            
+
     if args.html and html_outputs:
         try:
             with open(args.html, "w", encoding="utf-8") as f:
@@ -400,7 +428,7 @@ jobs:
         except Exception as e:
             print(f"Failed to write HTML report: {e}")
             sys.exit(3)
-            
+
     if args.export_prompt and llm_outputs:
         try:
             with open(args.export_prompt, "w", encoding="utf-8") as f:
