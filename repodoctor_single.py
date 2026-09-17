@@ -20,16 +20,19 @@ import collections
 import concurrent.futures
 import contextlib
 import hashlib
+import http.server
 import io
 import itertools
 import json
 import os
 import re
+import socketserver
 import subprocess
 import sys
 import threading
 import time
 import urllib.request
+import webbrowser
 
 # --- models.py ---
 
@@ -167,6 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--ai-review", action="store_true", help="Get live AI code review")
     parser.add_argument("--time-machine", action="store_true", help="Run Git Time Machine analytics")
+    parser.add_argument("--serve", action="store_true", help="Host live web dashboard on localhost:8080")
+    parser.add_argument("--blame", action="store_true", help="Run git blame on code smells")
+    parser.add_argument("--docs", action="store_true", help="Generate API documentation")
+    parser.add_argument("--legal", action="store_true", help="Scan for legal and license risks")
     parser.add_argument("--interactive", action="store_true", help="Launch Interactive TUI")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -632,6 +639,39 @@ def analyze_metrics(files: List[FileInfo]) -> None:
                     metrics.num_functions += 1
 
         f.metrics = metrics
+
+
+def find_god_function(files) -> str:
+    max_complexity = 0
+    god_func_name = ""
+    god_func_file = ""
+    
+    for f in files:
+        if f.language == "Python":
+            funcs = re.finditer(r'^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(.*?\):([\s\S]*?)(?=(?:^def |\Z))', f.content, re.MULTILINE)
+            for m in funcs:
+                name = m.group(1)
+                body = m.group(2)
+                complexity = len(re.findall(r'\b(if|elif|for|while|and|or|except|with)\b', body))
+                if complexity > max_complexity:
+                    max_complexity = complexity
+                    god_func_name = name
+                    god_func_file = f.relative_path
+                    
+        elif f.language == "JavaScript":
+            funcs = re.finditer(r'function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(.*?\)\s*\{([\s\S]*?)(?=(?:function |\Z))', f.content)
+            for m in funcs:
+                name = m.group(1)
+                body = m.group(2)
+                complexity = len(re.findall(r'\b(if|else if|for|while|&&|\|\||catch|switch)\b', body))
+                if complexity > max_complexity:
+                    max_complexity = complexity
+                    god_func_name = name
+                    god_func_file = f.relative_path
+
+    if max_complexity > 10:
+        return f"{god_func_name} in {god_func_file} (Complexity: {max_complexity})"
+    return ""
 
 
 # --- todos.py ---
@@ -1757,6 +1797,131 @@ def run_micro_linters(file_info, content):
             smells.append("Markdown missing # H1 Title at start")
 
     return smells
+
+
+# --- serve.py ---
+
+
+class ReportHandler(http.server.SimpleHTTPRequestHandler):
+    report_html = "<h1>Running...</h1>"
+
+    def do_GET(self):
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(ReportHandler.report_html.encode('utf-8', 'ignore'))
+        else:
+            super().do_GET()
+
+def start_server(port: int = 8080):
+    """Starts the web server in a background thread."""
+    handler = ReportHandler
+    try:
+        httpd = socketserver.TCPServer(("", port), handler)
+        server_thread = threading.Thread(target=httpd.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+        print(f"\\n🌐 Live Dashboard running at http://localhost:{port}")
+        # Try to open browser
+        try:
+            webbrowser.open(f"http://localhost:{port}")
+        except:
+            pass
+        return httpd
+    except Exception as e:
+        print(f"Server Error: {e}")
+        return None
+
+
+# --- blame.py ---
+
+
+def get_git_blame(filepath: str, line_num: int) -> str:
+    """
+    Runs git blame for a specific line in a file and returns the author.
+    """
+    try:
+        if not os.path.exists(filepath):
+            return "Unknown"
+        out = subprocess.check_output(
+            ["git", "blame", "-L", f"{line_num},{line_num}", "--", filepath],
+            universal_newlines=True, errors="ignore", stderr=subprocess.DEVNULL
+        )
+        # Output format: ^hash (Author Name 2023-01-01...)
+        if out and '(' in out:
+            author_part = out.split('(', 1)[1]
+            # It's tricky to parse author name perfectly because it can have spaces, but dates usually start with 20
+            # Let's just grab the first word or everything before the first number
+            import re
+            match = re.search(r'([^\d]+)\s+\d{4}-', author_part)
+            if match:
+                return match.group(1).strip()
+            else:
+                return author_part.split()[0]
+    except Exception:
+        pass
+    return "Unknown"
+
+
+# --- docsgen.py ---
+
+
+def generate_docs(files, root_path):
+    """
+    Parses files for functions and classes and generates markdown documentation.
+    """
+    docs_dir = os.path.join(root_path, "docs")
+    os.makedirs(docs_dir, exist_ok=True)
+    
+    docs_content = ["# API Reference\n"]
+    
+    for f in files:
+        if f.language == "Python":
+            # Very basic parser
+            funcs = re.findall(r'^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*?)\):', f.content, re.MULTILINE)
+            if funcs:
+                docs_content.append(f"## `{f.relative_path}`")
+                for name, params in funcs:
+                    docs_content.append(f"- **`{name}({params})`**")
+                docs_content.append("")
+        elif f.language == "JavaScript":
+            funcs = re.findall(r'function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*?)\)', f.content)
+            if funcs:
+                docs_content.append(f"## `{f.relative_path}`")
+                for name, params in funcs:
+                    docs_content.append(f"- **`{name}({params})`**")
+                docs_content.append("")
+                
+    with open(os.path.join(docs_dir, "api_reference.md"), "w", encoding="utf-8") as out:
+        out.write("\n".join(docs_content))
+        
+    return os.path.join(docs_dir, "api_reference.md")
+
+
+# --- legal.py ---
+
+
+def scan_legal(files) -> list:
+    """
+    Scans files for dangerous licenses like GPL.
+    Returns a list of warning strings.
+    """
+    warnings = []
+    
+    for f in files:
+        if f.filename == "package.json":
+            match = re.search(r'"license"\s*:\s*"([^"]+)"', f.content, re.IGNORECASE)
+            if match:
+                lic = match.group(1).upper()
+                if "GPL" in lic and "LGPL" not in lic:
+                    warnings.append(f"⚖️ {f.relative_path}: Declares {lic} license (Copyleft risk!)")
+                    
+        elif f.filename == "LICENSE" or f.filename.startswith("LICENSE."):
+            if "GNU GENERAL PUBLIC LICENSE" in f.content.upper():
+                warnings.append(f"⚖️ {f.relative_path}: GPL license detected in file contents (Copyleft risk!)")
+                
+    return warnings
 
 
 # --- ai.py ---

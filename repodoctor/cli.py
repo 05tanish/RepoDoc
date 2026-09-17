@@ -50,6 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--ai-review", action="store_true", help="Get live AI code review")
     parser.add_argument("--time-machine", action="store_true", help="Run Git Time Machine analytics")
+    parser.add_argument("--serve", action="store_true", help="Host live web dashboard on localhost:8080")
+    parser.add_argument("--blame", action="store_true", help="Run git blame on code smells")
+    parser.add_argument("--docs", action="store_true", help="Generate API documentation")
+    parser.add_argument("--legal", action="store_true", help="Scan for legal and license risks")
     parser.add_argument("--interactive", action="store_true", help="Launch Interactive TUI")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
