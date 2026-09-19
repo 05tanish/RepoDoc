@@ -11,7 +11,7 @@ def run_time_machine(root_path: str):
         # Get last 10 commits
         commits_out = subprocess.check_output(
             ["git", "log", "--pretty=format:%h|%s", "-n", "10"],
-            cwd=root_path, universal_newlines=True, errors="ignore"
+            cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}
         )
         commits = [line.split('|') for line in commits_out.splitlines() if '|' in line]
         if not commits:
@@ -24,7 +24,7 @@ def run_time_machine(root_path: str):
         # We need to save the current branch
         branch_out = subprocess.check_output(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=root_path, universal_newlines=True, errors="ignore"
+            cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}
         ).strip()
         
         print(f"Tracking Health Score across {len(commits)} commits...")
@@ -36,7 +36,7 @@ def run_time_machine(root_path: str):
             # Very lightweight proxy calculation: just count total lines as a fake proxy for speed
             # Real implementation would call scan_repository, but that takes too long for 10 commits
             # Let's count files instead to simulate score dropping/raising
-            file_count = len(subprocess.check_output(["git", "ls-files"], cwd=root_path, universal_newlines=True, errors="ignore").splitlines())
+            file_count = len(subprocess.check_output(["git", "ls-files"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}).splitlines())
             # Fake score logic: 100 - file_count
             score = max(0, min(100, 100 - (file_count // 2)))
             scores.append((hash_id, score, msg))

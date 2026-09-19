@@ -19,7 +19,7 @@ def run_forecast(files):
 # 3. RPG Leaderboard
 def run_gamify(root_path):
     try:
-        out = subprocess.check_output(["git", "shortlog", "-sn"], cwd=root_path, universal_newlines=True, errors="ignore")
+        out = subprocess.check_output(["git", "shortlog", "-sn"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""})
         board = ["🎮 Developer RPG Leaderboard:"]
         for line in out.splitlines():
             if not line.strip(): continue
@@ -66,7 +66,7 @@ def run_architecture(files, root_path):
 # 7. Rage Quit
 def run_rage(root_path):
     try:
-        out = subprocess.check_output(["git", "log", "--pretty=format:%s"], cwd=root_path, universal_newlines=True, errors="ignore")
+        out = subprocess.check_output(["git", "log", "--pretty=format:%s"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""})
         rage_count = sum(1 for line in out.splitlines() if line.isupper() or '!' in line or 'fuck' in line.lower() or 'shit' in line.lower())
         return f"😡 Rage Quit Metric: {rage_count} angry commits detected!"
     except:

@@ -1976,7 +1976,7 @@ def run_forecast(files):
 # 3. RPG Leaderboard
 def run_gamify(root_path):
     try:
-        out = subprocess.check_output(["git", "shortlog", "-sn"], cwd=root_path, universal_newlines=True, errors="ignore")
+        out = subprocess.check_output(["git", "shortlog", "-sn"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""})
         board = ["🎮 Developer RPG Leaderboard:"]
         for line in out.splitlines():
             if not line.strip(): continue
@@ -2023,7 +2023,7 @@ def run_architecture(files, root_path):
 # 7. Rage Quit
 def run_rage(root_path):
     try:
-        out = subprocess.check_output(["git", "log", "--pretty=format:%s"], cwd=root_path, universal_newlines=True, errors="ignore")
+        out = subprocess.check_output(["git", "log", "--pretty=format:%s"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""})
         rage_count = sum(1 for line in out.splitlines() if line.isupper() or '!' in line or 'fuck' in line.lower() or 'shit' in line.lower())
         return f"😡 Rage Quit Metric: {rage_count} angry commits detected!"
     except:
@@ -2139,7 +2139,7 @@ def run_time_machine(root_path: str):
         # Get last 10 commits
         commits_out = subprocess.check_output(
             ["git", "log", "--pretty=format:%h|%s", "-n", "10"],
-            cwd=root_path, universal_newlines=True, errors="ignore"
+            cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}
         )
         commits = [line.split('|') for line in commits_out.splitlines() if '|' in line]
         if not commits:
@@ -2152,7 +2152,7 @@ def run_time_machine(root_path: str):
         # We need to save the current branch
         branch_out = subprocess.check_output(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=root_path, universal_newlines=True, errors="ignore"
+            cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}
         ).strip()
         
         print(f"Tracking Health Score across {len(commits)} commits...")
@@ -2164,7 +2164,7 @@ def run_time_machine(root_path: str):
             # Very lightweight proxy calculation: just count total lines as a fake proxy for speed
             # Real implementation would call scan_repository, but that takes too long for 10 commits
             # Let's count files instead to simulate score dropping/raising
-            file_count = len(subprocess.check_output(["git", "ls-files"], cwd=root_path, universal_newlines=True, errors="ignore").splitlines())
+            file_count = len(subprocess.check_output(["git", "ls-files"], cwd=root_path, universal_newlines=True, errors="ignore", stdin=subprocess.DEVNULL, env={**os.environ, "GIT_PAGER": ""}).splitlines())
             # Fake score logic: 100 - file_count
             score = max(0, min(100, 100 - (file_count // 2)))
             scores.append((hash_id, score, msg))
@@ -2531,7 +2531,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         if getattr(args, "play", False): mega_output.append(run_play())
         
         if mega_output:
-            terminal_report += "\n\n" + "\n".join(mega_output) + "\n"
+            print("\n\n" + "\n".join(mega_output) + "\n")
             
         if getattr(args, "speak", False): run_speak(score)
         if getattr(args, "watch", False): 

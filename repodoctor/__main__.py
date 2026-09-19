@@ -236,7 +236,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         if getattr(args, "play", False): mega_output.append(run_play())
         
         if mega_output:
-            terminal_report += "\n\n" + "\n".join(mega_output) + "\n"
+            print("\n\n" + "\n".join(mega_output) + "\n")
             
         if getattr(args, "speak", False): run_speak(score)
         if getattr(args, "watch", False): 
