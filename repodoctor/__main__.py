@@ -232,7 +232,7 @@ def process_single_repo(root_path, args, idx, custom_ignores, use_parallel, show
         if getattr(args, "gen_tests", False): mega_output.append(run_gentests(files, root_path))
         if getattr(args, "explain_regex", False): mega_output.append(run_explain_regex(files))
         if getattr(args, "schema", False): mega_output.append(run_schema(files))
-        if getattr(args, "slides", False): mega_output.append(run_slides(root_path))
+        if getattr(args, "slides", False): mega_output.append(run_slides(root_path, files))
         if getattr(args, "play", False): mega_output.append(run_play())
         
         if mega_output:
