@@ -1,0 +1,1696 @@
+REPO DOCTOR V3.0 - COMPLETE FEATURE TEST REPORT
+==================================================
+
+========================================
+COMMAND: python repodoctor_single.py . --json
+========================================
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+{
+  "repository": {
+    "path": "D:\\project",
+    "name": "project"
+  },
+  "summary": {
+    "files": 73,
+    "lines": 7094,
+    "health_score": 24
+  },
+  "security": {
+    "potential_secrets": 2,
+    "findings": [
+      {
+        "file": "tests\\test_security.py",
+        "line": 24,
+        "category": "API Key or Token",
+        "confidence": "HIGH",
+        "explanation": "A variable name suggests an API key or token was hardcoded.",
+        "redacted_value": "sk-...56"
+      },
+      {
+        "file": "tests\\test_security.py",
+        "line": 24,
+        "category": "Potential API Key",
+        "confidence": "HIGH",
+        "explanation": "Pattern matches common cloud API keys (e.g., sk-...).",
+        "redacted_value": "sk-...56"
+      }
+    ]
+  },
+  "maintainability": {
+    "large_files": 2,
+    "todos": 30,
+    "duplicates": 32
+  },
+  "git": {
+    "available": true,
+    "branch": "main",
+    "commits": 84,
+    "uncommitted_changes": 4
+  },
+  "structure": {
+    "README": "PASS",
+    ".gitignore": "PASS",
+    "Tests": "PASS",
+    "LICENSE": "WARN",
+    "CI config": "WARN"
+  }
+}
+
+
+========================================
+COMMAND: python repodoctor_single.py . --badge
+========================================
+usage: repodoctor [-h] [--json] [--html HTML] [--baseline BASELINE]
+                  [--no-color] [--badge FILE] [--tree] [--export-prompt FILE]
+                  [--ignore IGNORE] [--large-file-lines LARGE_FILE_LINES]
+                  [--duplicate-lines DUPLICATE_LINES] [--security] [--todos]
+                  [--git] [--verbose] [--parallel] [--no-animation]
+                  [--init-ci] [--fix] [--graph] [--ai-review] [--time-machine]
+                  [--serve] [--blame] [--docs] [--legal] [--interactive]
+                  [--speak] [--forecast] [--gamify] [--plagiarism] [--chaos]
+                  [--architecture] [--rage] [--watch] [--auto-commit]
+                  [--heatmap] [--p2p] [--typosquat] [--gen-tests]
+                  [--explain-regex] [--schema] [--slides] [--play] [--version]
+                  [path ...]
+repodoctor: error: argument --badge: expected one argument
+
+
+========================================
+COMMAND: python repodoctor_single.py . --graph
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,181
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           24/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            2
+Long functions:         199
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       30
+Duplicate blocks:       32
+Top vocabulary:         files (306), data (256), path (249), append (215), content (200)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. repodoctor\__main__.py (501 lines)
+  3. repodoctor\report.py (363 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (42 positive, 72 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 24/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -6
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.69 seconds
+
+
+ASCII Dependency Graph:
+├── build_single_file.py
+│   ├── os
+│   └── re
+├── patch_content.py
+│   ├── re
+│   └── sys
+├── patch_loops.py
+│   ├── re
+│   └── sys
+├── patch_loops_manual.py
+│   └── sys
+├── patch_slides.py
+│   └── sys
+├── repodoctor\__main__.py
+│   ├── .baseline
+│   ├── .cli
+│   ├── .duplicates
+│   ├── .git
+│   ├── .languages
+│   ├── .metrics
+│   ├── .models
+│   ├── .report
+│   ├── .scanner
+│   ├── .scoring
+│   ├── .security
+│   ├── .spinner
+│   ├── .structure
+│   ├── .todos
+│   ├── collections
+│   ├── concurrent.futures
+│   ├── contextlib
+│   ├── io
+│   ├── os
+│   ├── re
+│   ├── sys
+│   └── time
+├── repodoctor\ai.py
+│   ├── json
+│   ├── os
+│   ├── typing
+│   └── urllib.request
+├── repodoctor\autofix.py
+│   ├── os
+│   └── re
+├── repodoctor\baseline.py
+│   ├── .models
+│   ├── json
+│   ├── os
+│   └── typing
+├── repodoctor\blame.py
+│   ├── os
+│   └── subprocess
+├── repodoctor\cli.py
+│   ├── argparse
+│   └── sys
+├── repodoctor\config.py
+│   ├── json
+│   ├── os
+│   └── re
+├── repodoctor\deadcode.py
+│   └── re
+├── repodoctor\docsgen.py
+│   ├── os
+│   └── re
+├── repodoctor\duplicates.py
+│   ├── .models
+│   ├── collections
+│   ├── hashlib
+│   └── typing
+├── repodoctor\git.py
+│   ├── .models
+│   ├── os
+│   └── subprocess
+├── repodoctor\graph.py
+│   ├── collections
+│   ├── os
+│   └── re
+├── repodoctor\languages.py
+│   ├── .models
+│   └── typing
+├── repodoctor\legal.py
+│   ├── os
+│   └── re
+├── repodoctor\linter.py
+│   ├── ast
+│   └── re
+├── repodoctor\mega.py
+│   ├── collections
+│   └── os
+├── repodoctor\metrics.py
+│   ├── .models
+│   ├── ast
+│   ├── re
+│   └── typing
+├── repodoctor\models.py
+│   ├── dataclasses
+│   └── typing
+├── repodoctor\report.py
+│   ├── .models
+│   ├── json
+│   ├── sys
+│   ├── time
+│   └── typing
+├── repodoctor\scanner.py
+│   ├── .models
+│   ├── .spinner
+│   ├── concurrent.futures
+│   ├── os
+│   ├── pathlib
+│   └── typing
+├── repodoctor\scoring.py
+│   └── .models
+├── repodoctor\security.py
+│   ├── .models
+│   ├── re
+│   └── typing
+├── repodoctor\serve.py
+│   ├── http.server
+│   ├── os
+│   ├── socketserver
+│   ├── threading
+│   └── webbrowser
+├── repodoctor\spinner.py
+│   ├── itertools
+│   ├── sys
+│   ├── threading
+│   └── time
+├── repodoctor\structure.py
+│   ├── os
+│   └── typing
+├── repodoctor\timemachine.py
+│   ├── os
+│   ├── subprocess
+│   └── time
+├── repodoctor\todos.py
+│   ├── .models
+│   ├── re
+│   └── typing
+├── repodoctor_single.py
+│   ├── argparse
+│   ├── ast
+│   ├── collections
+│   ├── concurrent.futures
+│   ├── contextlib
+│   ├── dataclasses
+│   ├── hashlib
+│   ├── http.server
+│   ├── io
+│   ├── itertools
+│   ├── json
+│   ├── os
+│   ├── pathlib
+│   ├── re
+│   ├── socketserver
+│   ├── subprocess
+│   ├── sys
+│   ├── threading
+│   ├── time
+│   ├── typing
+│   ├── urllib.request
+│   └── webbrowser
+├── setup.py
+│   └── setuptools
+├── test_all_features.py
+│   ├── os
+│   ├── shutil
+│   └── subprocess
+├── tests\test_baseline.py
+│   ├── json
+│   ├── os
+│   ├── repodoctor.baseline
+│   ├── repodoctor.models
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+├── tests\test_cli.py
+│   ├── repodoctor.cli
+│   └── unittest
+├── tests\test_duplicates.py
+│   ├── os
+│   ├── repodoctor.duplicates
+│   ├── repodoctor.models
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+├── tests\test_git.py
+│   ├── os
+│   ├── repodoctor.git
+│   ├── shutil
+│   ├── tempfile
+│   ├── unittest
+│   └── unittest.mock
+├── tests\test_languages.py
+│   ├── repodoctor.languages
+│   ├── repodoctor.models
+│   └── unittest
+├── tests\test_metrics.py
+│   ├── os
+│   ├── repodoctor.metrics
+│   ├── repodoctor.models
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+├── tests\test_packaging.py
+│   ├── os
+│   ├── subprocess
+│   ├── sys
+│   └── unittest
+├── tests\test_parallel.py
+│   ├── os
+│   ├── repodoctor.scanner
+│   ├── sys
+│   ├── tempfile
+│   ├── unittest
+│   └── unittest.mock
+├── tests\test_scanner.py
+│   ├── os
+│   ├── repodoctor.scanner
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+├── tests\test_scoring.py
+│   ├── repodoctor.models
+│   ├── repodoctor.scoring
+│   └── unittest
+├── tests\test_security.py
+│   ├── os
+│   ├── repodoctor.models
+│   ├── repodoctor.security
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+├── tests\test_structure.py
+│   ├── os
+│   ├── repodoctor.structure
+│   ├── shutil
+│   ├── tempfile
+│   └── unittest
+└── tests\test_todos.py
+    ├── os
+    ├── repodoctor.models
+    ├── repodoctor.todos
+    ├── shutil
+    ├── tempfile
+    └── unittest
+
+
+
+========================================
+COMMAND: python repodoctor_single.py . --forecast
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[FORECAST] repodoctor_single.py has a 94% probability of causing a bug soon due to high complexity!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,527
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           24/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            2
+Long functions:         204
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       32
+Duplicate blocks:       33
+Top vocabulary:         files (309), data (257), path (250), repodoctor (216), append (216)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. repodoctor\__main__.py (501 lines)
+  3. all_features_output.txt (436 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (44 positive, 74 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 24/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -6
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.67 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --plagiarism
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[PLAGIARISM] patch_content.py: 'foo/bar' boilerplate found. StackOverflow copy-paste suspected!\n[PLAGIARISM] repodoctor_single.py: 'foo/bar' boilerplate found. StackOverflow copy-paste suspected!\n[PLAGIARISM] repodoctor\mega.py: 'foo/bar' boilerplate found. StackOverflow copy-paste suspected!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,628
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         209
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       34
+Duplicate blocks:       34
+Top vocabulary:         files (312), data (258), path (251), repodoctor (218), append (217)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (537 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (46 positive, 76 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.76 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --chaos
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[CHAOS] Chaos Monkey injected syntax error into .gitignore! Check your CI!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,729
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         214
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       36
+Duplicate blocks:       35
+Top vocabulary:         files (315), data (259), path (252), repodoctor (221), append (218)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (638 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (48 positive, 78 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 1.05 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --architecture
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[ARCHITECTURE] Saved to architecture.mmd
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,830
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         219
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       38
+Duplicate blocks:       35
+Top vocabulary:         files (318), data (260), path (253), repodoctor (223), append (219)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (739 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (50 positive, 80 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.97 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --auto-commit
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          7,931
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         224
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       40
+Duplicate blocks:       36
+Top vocabulary:         files (321), data (261), path (254), repodoctor (225), append (220)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (840 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (52 positive, 82 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.84 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --heatmap
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[HEATMAP] \n  backend/ (HOT)\n  frontend/ (COOL)
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,028
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         229
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       42
+Duplicate blocks:       36
+Top vocabulary:         files (324), data (262), path (255), repodoctor (227), append (221)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (937 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (54 positive, 84 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.95 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --typosquat
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[TYPOSQUAT] No malicious typosquatting detected.
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,129
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         234
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       44
+Duplicate blocks:       36
+Top vocabulary:         files (327), data (263), path (256), repodoctor (229), append (222)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,038 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (56 positive, 86 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 1.18 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --gen-tests
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[AUTO-TESTS] Generated 0 real unit tests in tests_auto/ folder based on your functions!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,230
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         239
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       46
+Duplicate blocks:       36
+Top vocabulary:         files (330), data (264), path (257), repodoctor (231), append (223)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,139 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (58 positive, 88 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.84 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --explain-regex
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[REGEX EXPLAINER] Found complex regexes in 3 files.
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,331
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         244
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       48
+Duplicate blocks:       36
+Top vocabulary:         files (333), data (265), path (258), repodoctor (233), append (224)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,240 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (60 positive, 90 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.81 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --schema
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[SCHEMA] No SQL schema flaws detected.
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,432
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         249
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       50
+Duplicate blocks:       36
+Top vocabulary:         files (337), data (266), path (259), repodoctor (235), append (225)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,341 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (62 positive, 92 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.74 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --slides
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[SLIDES] REAL Presentation generated at presentation.md using actual codebase data!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,533
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         254
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       52
+Duplicate blocks:       36
+Top vocabulary:         files (340), data (267), path (260), repodoctor (237), append (226)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,442 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (64 positive, 94 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 1.06 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --play
+========================================
+
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+[RPG] You enter the codebase dungeon. A wild Nested Loop appears! You cast Refactor... It's super effective!
+
+
+Repository: project
+Path: D:\project
+
+SUMMARY
+────────────────────────────────────────────────────────────
+Files scanned:          73
+Lines of code:          8,634
+Languages detected:
+  Python             █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ 96.5%
+
+  Markdown           3.5%
+
+Health score:           21/100
+
+MAINTAINABILITY
+────────────────────────────────────────────────────────────
+Large files:            3
+Long functions:         259
+High nesting:           18
+Code smells (Linting):  0
+TODO/FIXME items:       54
+Duplicate blocks:       36
+Top vocabulary:         files (343), data (269), path (261), repodoctor (239), append (227)
+
+Heaviest Files:
+  1. repodoctor_single.py (2,803 lines)
+  2. all_features_output.txt (1,543 lines)
+  3. repodoctor\__main__.py (501 lines)
+
+SECURITY
+────────────────────────────────────────────────────────────
+Potential secrets:      2
+  tests\test_security.py:24 - API Key or Token (Confidence: HIGH)
+  Value: sk-...56
+  tests\test_security.py:24 - Potential API Key (Confidence: HIGH)
+  Value: sk-...56
+
+PROJECT HEALTH
+────────────────────────────────────────────────────────────
+README                  ✓
+.gitignore              ✓
+Tests                   ✓
+LICENSE                 ⚠
+CI config               ⚠
+
+Project Mood:           Balanced ⚖️ (66 positive, 96 negative words)
+👯‍♂️ Clone Exposer:       D:\project\repodoctor_cli.egg-info\PKG-INFO & D:\project\README.md (97% identical)
+
+GIT
+────────────────────────────────────────────────────────────
+Branch:                 main
+Uncommitted changes:    4
+Commits:                84
+Top Contributor:        harshk94138167777-png (50 commits)
+🔥 Hotspot file:        repodoctor_single.py (45 edits)
+
+────────────────────────────────────────────────────────────
+Health Score: 21/100
+Guide: 90+ (Excellent) | 70-89 (Good) | <70 (Needs Work)
+────────────────────────────────────────────────────────────
+README present                 +5
+Tests detected                 +5
+.gitignore present             +5
+Large files                    -9
+TODO/FIXME count               -10
+Potential secrets              -30
+Duplicate blocks               -20
+High complexity                -10
+
+⚡ Scan completed in 0.74 seconds
+
+
+========================================
+COMMAND: python repodoctor_single.py . --watch
+========================================
+Command timed out after 15 seconds! Output so far: 
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
+========================================
+COMMAND: python repodoctor_single.py . --p2p
+========================================
+Command timed out after 15 seconds! Output so far: 
+╔════════════════════════════════════════════════════════════╗
+║                        REPO DOCTOR                         ║
+╚════════════════════════════════════════════════════════════╝
+Welcome to RepoDoctor! 🩺
+Initializing zero-dependency static analysis engine...
+
+Detecting languages (.)…
+✔  Detecting languages (.)
+Analysing metrics (.)…
+✔  Analysing metrics (.)
+Scanning TODOs (.)…
+✔  Scanning TODOs (.)
+Scanning security patterns (.)…
+✔  Scanning security patterns (.)
+Detecting duplicates (.)…
+✔  Detecting duplicates (.)
+Checking project structure (.)…
+✔  Checking project structure (.)
+Reading Git info (.)…
+✔  Reading Git info (.)
+
+
